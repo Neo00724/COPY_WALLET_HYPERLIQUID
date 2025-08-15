@@ -119,15 +119,27 @@ The strategy provides detailed logging including:
 
 ### Example Output
 ```
+================================================================================
 POSITIONS SUMMARY
 ================================================================================
-Copied Account Value: $10,000.00
-My Account Value:    $1,000.00
-Scale Factor:        0.100000x (inverted 10.0x)
+Copied Account Value: $2,439,609.23
+My Account Value:    $1,050.96
+Scale Factor:        0.000431x (interted 2321.3x )
 --------------------------------------------------
 POSITIONS TO COPY:
-     BTC |  LONG | Size:       1.2500 | Value: $150,000.00 (50.00%) | Scaled:    $500.00
-     ETH |  LONG | Size:      15.0000 | Value:  $66,000.00 (30.00%) | Scaled:    $300.00
+       BTC |  LONG | Size:       0.0001 | Value: $     10.57 ( 0.00%) | Scaled: $      0.00
+       ETH |  LONG | Size:       0.0001 | Value: $      0.44 ( 0.00%) | Scaled: $      0.00
+      HYPE |  LONG | Size:   87720.0200 | Value: $4188630.96 (171.69%) | Scaled: $   1804.43
+--------------------------------------------------
+MY OPEN POSITIONS:
+      HYPE | LONG  | Stake: $    304.92 | Value: $   1829.53 (174.08%) | Leverage: 6.0x
+--------------------------------------------------
+POSITION MATCHING ANALYSIS:
+  Matching positions:
+        HYPE | Copied: $4188630.96 -> Expected: $ 1804.43 | Actual: $ 1829.53 | Diff:    1.4%
+  Missing positions (should open):
+================================================================================
+HYPE → Difference: 1.39%   (my total value: 1829.5)
 ```
 
 ## Disclaimers
