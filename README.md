@@ -16,6 +16,7 @@ This strategy monitors a specified Hyperliquid wallet address and replicates its
 - **Comprehensive Logging**: Detailed position summaries and change tracking
 - **Data Persistence**: Saves position history and changes to CSV files
 - **Missed Trade Recovery**: Detects and corrects missed entries/exits, or incorect sizing
+- Can trade top ~50 Hyperliquid coins, sorted by market cap (ignores lower), dynamic list, see full list here : https://remotepairlist.com?q=4885f6046bea5db4
 
 ## Requirements
 
