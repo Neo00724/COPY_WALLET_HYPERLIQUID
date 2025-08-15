@@ -137,9 +137,8 @@ MY OPEN POSITIONS:
 POSITION MATCHING ANALYSIS:
   Matching positions:
         HYPE | Copied: $4188630.96 -> Expected: $ 1804.43 | Actual: $ 1829.53 | Diff:    1.4%
-  Missing positions (should open):
+  Missing positions (should open): None
 ================================================================================
-HYPE → Difference: 1.39%   (my total value: 1829.5)
 ```
 
 ## Disclaimers
