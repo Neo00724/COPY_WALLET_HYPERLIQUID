@@ -1,6 +1,7 @@
 # Hyperliquid Copy Trading Strategy
 
 A Freqtrade strategy that automatically copies trades from a Hyperliquid perpetual futures account to your Freqtrade bot.
+More about Freqtrade: https://www.freqtrade.io/en/stable/
 
 ## Overview
 
@@ -86,9 +87,10 @@ The strategy creates a `position_data/` directory with:
 
 2. **Configure Strategy**:
 ```python
-# In the strategy file, set your target address
+# In `COPY_HL.py`, set your target address
 ADDRESS_TO_TRACK_TOP = "0x1234567890abcdef1234567890abcdef12345678"
 ```
+Adjust `max_open_trades` (in `config.json`) and `LEV` (in `COPY_HL.py`) for the account to be copied.
 
 3. **Run Freqtrade**:
 ```bash
@@ -123,17 +125,17 @@ My Account Value:    $1,000.00
 Scale Factor:        0.100000x (inverted 10.0x)
 --------------------------------------------------
 POSITIONS TO COPY:
-     BTC |  LONG | Size:       1.2500 | Value:  $5,000.00 (50.00%) | Scaled:    $500.00
-     ETH |  LONG | Size:      15.0000 | Value:  $3,000.00 (30.00%) | Scaled:    $300.00
+     BTC |  LONG | Size:       1.2500 | Value: $150,000.00 (50.00%) | Scaled:    $500.00
+     ETH |  LONG | Size:      15.0000 | Value:  $66,000.00 (30.00%) | Scaled:    $300.00
 ```
 
 ## Disclaimers
 
 ⚠️ **Important Warnings**:
 - Very fresh and experimental, use with Dry-run only (paper trading)
-- Past performance doesn't guarantee future results
 - Monitor positions regularly (e.g. look in  ttps://apexliquid.bot/)
 - The copied trader's strategy may not be suitable for your risk tolerance and leverage level
+- Past performance doesn't guarantee future results
 
 ## License
 
