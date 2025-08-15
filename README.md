@@ -36,7 +36,7 @@ Remark: `stake_amount` in `config.json` is ignored.
 
 ### Required Settings
 
-1. **Set Target Address**: Update `ADDRESS_TO_TRACK_TOP` variable with the Hyperliquid wallet you want to copy, for exemple:
+1. **Set Target Address**: Update `ADDRESS_TO_TRACK_TOP` variable at the top of `COPY_HL.py` with the Hyperliquid wallet you want to copy, for example:
 ```python
 ADDRESS_TO_TRACK_TOP = "0x4b66f4048a0a90fd5ff44abbe5d68332656b78b8"
 ```
