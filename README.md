@@ -45,7 +45,7 @@ You can also check the positions of the wallet to copy with e.g. : https://apexl
 ## How It Works
 
 ### Position Tracking
-1. **API Polling**: Fetches position data from Hyperliquid every (cached)
+1. **API Polling**: Fetches position data from Hyperliquid (cached)
 2. **Change Detection**: Compares current positions with previous snapshot
 3. **Signal Generation**: Creates buy/sell signals based on detected changes
 4. See `track_account.py` to test the account tracking class.
