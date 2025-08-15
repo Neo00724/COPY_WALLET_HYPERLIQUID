@@ -11,7 +11,7 @@ This strategy monitors a specified Hyperliquid wallet address and replicates its
 - **Real-time Position Tracking**: Monitors target Hyperliquid account for position changes
 - **Smart Position Scaling**: Automatically scales position sizes based on account value ratios
 - **Position Change Detection**: Detects opens, closes, increases, decreases, and modifications
-- **Long-Only Trading**: **Only copies long positions** (ignores shorts for simplicity, and in general it reduces the long-terme risk-reward ratio)
+- **Long-Only Trading**: **Only copies long positions** (ignores shorts for simplicity, and in general it reduces the long-term risk-reward ratio)
 - **Comprehensive Logging**: Detailed position summaries and change tracking
 - **Data Persistence**: Saves position history and changes to CSV files
 - **Missed Trade Recovery**: Detects and corrects missed entries/exits
