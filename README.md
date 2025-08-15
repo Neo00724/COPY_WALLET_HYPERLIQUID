@@ -14,7 +14,7 @@ This strategy monitors a specified Hyperliquid wallet address and replicates its
 - **Long-Only Trading**: **Only copies long positions** (ignores shorts for simplicity, and in general it reduces the long-term risk-reward ratio)
 - **Comprehensive Logging**: Detailed position summaries and change tracking
 - **Data Persistence**: Saves position history and changes to CSV files
-- **Missed Trade Recovery**: Detects and corrects missed entries/exits
+- **Missed Trade Recovery**: Detects and corrects missed entries/exits, or incorect sizing
 
 ## Requirements
 
