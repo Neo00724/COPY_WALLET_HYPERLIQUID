@@ -117,7 +117,7 @@ The strategy provides detailed logging including:
 - Position matching analysis
 - Missing/extra position alerts
 
-### Example Output
+### Example Log
 ```
 ================================================================================
 POSITIONS SUMMARY
