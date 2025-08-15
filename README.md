@@ -32,6 +32,7 @@ This strategy monitors a specified Hyperliquid wallet address and replicates its
 | `change_threshold` (in `COPY_HL.py`)| 0.5 | Minimum position size or position change threshold (% of account) |
 | `ADDRESS_TO_TRACK` (in `COPY_HL.py`)| Set in code | Hyperliquid wallet address to copy |
 
+Remark: ``stake_amount` in `config.json` is ignored.
 
 ### Required Settings
 
