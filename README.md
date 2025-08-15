@@ -1,0 +1,139 @@
+# Hyperliquid Copy Trading Strategy
+
+A Freqtrade strategy that automatically copies trades from a Hyperliquid perpetual futures account to your Freqtrade bot.
+
+## Overview
+
+This strategy monitors a specified Hyperliquid wallet address and replicates its trading positions in your Freqtrade bot with appropriate position sizing based on account value scaling, and an "effective" leverage asssumption.
+
+## Features
+
+- **Real-time Position Tracking**: Monitors target Hyperliquid account for position changes
+- **Smart Position Scaling**: Automatically scales position sizes based on account value ratios
+- **Position Change Detection**: Detects opens, closes, increases, decreases, and modifications
+- **Long-Only Trading**: **Only copies long positions** (ignores shorts for simplicity, and in general it reduces the long-terme risk-reward ratio)
+- **Comprehensive Logging**: Detailed position summaries and change tracking
+- **Data Persistence**: Saves position history and changes to CSV files
+- **Missed Trade Recovery**: Detects and corrects missed entries/exits
+
+## Requirements
+
+### Dependencies
+`docker`, `docker compose`
+
+## Configuration
+
+### Main Strategy Parameters
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `max_open_trades` (`config.json`)| 4 | Hyperliquid wallet address to copy |
+| `LEV` (`COPY_HL.py`) | 6 | Effective leverage to use. Which value to use will depend on the account you copy, and it can be tricky to evaluate |
+| `change_threshold` (`COPY_HL.py`)| 0.5 | Minimum position size or position change threshold (% of account) |
+| `ADDRESS_TO_TRACK` (`COPY_HL.py`)| Set in code | Hyperliquid wallet address to copy |
+
+
+### Required Settings
+
+1. **Set Target Address**: Update `ADDRESS_TO_TRACK_TOP` variable with the Hyperliquid wallet you want to copy, for exemple:
+```python
+ADDRESS_TO_TRACK_TOP = "0x4b66f4048a0a90fd5ff44abbe5d68332656b78b8"
+```
+You can also check the position on the address : https://apexliquid.bot/detail?address=0x4b66f4048a0a90fd5ff44abbe5d68332656b78b8
+
+## How It Works
+
+### Position Tracking
+1. **API Polling**: Fetches position data from Hyperliquid every (cached)
+2. **Change Detection**: Compares current positions with previous snapshot
+3. **Signal Generation**: Creates buy/sell signals based on detected changes
+4. See `track_account.py` to test the account tracking class.
+
+### Position Scaling
+- Calculates scale factor: `My Account Value / Copied Account Value`
+- Adjusts position sizes proportionally
+- Only copies positions >0.5% of copied account value (absolute or changes)
+
+### Trade Management
+- **Entry**: Opens positions when target account opens new longs
+- **Exit**: Closes positions when target account closes positions
+- **Adjustment**: Increases/decreases positions to match target ratios
+- **Safety**: Immediately exits any mistakenly opened Short or Long positions
+
+## Position Types Detected
+
+| Change Type | Description | Action |
+|-------------|-------------|---------|
+| `opened_long` | New long position opened | Enter long |
+| `closed` | Position closed | Exit position |
+| `increased` | Position size increased | Add to position |
+| `decreased` | Position size decreased | Reduce position |
+| `modified` | Leverage/entry price changed |
+| `flipped` | Direction changed (long↔short) |
+
+## File Structure
+
+The strategy creates a `position_data/` directory with:
+- `positions_history.csv` - Complete position history
+- `last_positions.csv` - Current position snapshots  
+- `changes_log.csv` - All detected changes
+
+## Usage
+
+1. **Install Dependencies**:
+`Docker`
+
+2. **Configure Strategy**:
+```python
+# In the strategy file, set your target address
+ADDRESS_TO_TRACK_TOP = "0x1234567890abcdef1234567890abcdef12345678"
+```
+
+3. **Run Freqtrade**:
+```bash
+docker compose build
+docker compose up
+```
+
+## Safety Features
+
+- **Long-Only**: Automatically ignores and closes any short positions
+- **Size Limits**: Respects Freqtrade's min/max stake amounts
+- **Error Handling**: Gracefully handles API failures and data issues
+- **Position Validation**: Continuously validates position alignment
+- **Threshold Protection**: Ignores insignificant positions or positions changes
+
+## Monitoring
+
+### Console Output
+The strategy provides detailed logging including:
+- Position change summaries
+- Account value comparisons
+- Scale factor calculations
+- Position matching analysis
+- Missing/extra position alerts
+
+### Example Output
+```
+POSITIONS SUMMARY
+================================================================================
+Copied Account Value: $10,000.00
+My Account Value:    $1,000.00
+Scale Factor:        0.100000x (inverted 10.0x)
+--------------------------------------------------
+POSITIONS TO COPY:
+     BTC |  LONG | Size:       1.2500 | Value:  $5,000.00 (50.00%) | Scaled:    $500.00
+     ETH |  LONG | Size:      15.0000 | Value:  $3,000.00 (30.00%) | Scaled:    $300.00
+```
+
+## Disclaimers
+
+⚠️ **Important Warnings**:
+- Very fresh and experimental, use with Dry-run only (paper trading)
+- Past performance doesn't guarantee future results
+- Monitor positions regularly (e.g. look in  ttps://apexliquid.bot/)
+- The copied trader's strategy may not be suitable for your risk tolerance and leverage level
+
+## License
+
+This strategy is provided as-is for educational purposes. Use at your own risk.
