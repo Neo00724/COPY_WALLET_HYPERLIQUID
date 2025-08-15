@@ -69,8 +69,8 @@ You can also check the positions of the wallet to copy with e.g. : https://apexl
 | `closed` | Position closed | Exit position |
 | `increased` | Position size increased | Add to position |
 | `decreased` | Position size decreased | Reduce position |
-| `modified` | Leverage/entry price changed |
-| `flipped` | Direction changed (long↔short) |
+| `modified` | Leverage/entry price changed | None |
+| `flipped` | Direction changed (long↔short) | None |
 
 ## File Structure
 
