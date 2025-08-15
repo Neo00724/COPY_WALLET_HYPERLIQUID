@@ -40,7 +40,7 @@ Remark: `stake_amount` in `config.json` is ignored.
 ```python
 ADDRESS_TO_TRACK_TOP = "0x4b66f4048a0a90fd5ff44abbe5d68332656b78b8"
 ```
-You can also check the position on the address : https://apexliquid.bot/detail?address=0x4b66f4048a0a90fd5ff44abbe5d68332656b78b8
+You can also check the positions of the wallet to copy with e.g. : https://apexliquid.bot/detail?address=0x4b66f4048a0a90fd5ff44abbe5d68332656b78b8
 
 ## How It Works
 
