@@ -40,9 +40,9 @@ Remark: `stake_amount` in `config.json` is ignored.
 
 1. **Set Target Address**: Update `ADDRESS_TO_TRACK_TOP` variable at the top of `COPY_HL.py` with the Hyperliquid wallet you want to copy, for example:
 ```python
-ADDRESS_TO_TRACK_TOP = "0x4b66f4048a0a90fd5ff44abbe5d68332656b78b8"
+ADDRESS_TO_TRACK_TOP = "0x95b8b411653328db32f59b143c6d45f8501e2b35"
 ```
-You can also check the positions (verify if they are copied properly) of the wallet to copy with e.g. : https://apexliquid.bot/detail?address=0x4b66f4048a0a90fd5ff44abbe5d68332656b78b8
+You can also check the positions (verify if they are copied properly) of the wallet to copy with e.g. : https://apexliquid.bot/detail?address=0x95b8b411653328db32f59b143c6d45f8501e2b35
 
 ## How It Works
 
