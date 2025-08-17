@@ -145,7 +145,7 @@ POSITION MATCHING ANALYSIS:
 
 ⚠️ **Important Warnings**:
 - Very fresh and experimental, use with Dry-run only (paper trading)
-- Monitor positions regularly (e.g. look in  ttps://apexliquid.bot/)
+- Monitor positions regularly (e.g. look in `https://apexliquid.bot/`)
 - The copied trader's strategy may not be suitable for your risk tolerance and leverage level
 - Past performance doesn't guarantee future results
 
