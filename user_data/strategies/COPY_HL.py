@@ -17,7 +17,7 @@ from copy import deepcopy
 
 logger = logging.getLogger(__name__)
 
-ADDRESS_TO_TRACK_TOP = "0x4b66f4048a0a90fd5ff44abbe5d68332656b78b8"
+ADDRESS_TO_TRACK_TOP = "0x95b8b411653328db32f59b143c6d45f8501e2b35"
 
 #####################################################################################################################################################################################################
 # Classes used to manage the copied wallet position tracking
@@ -1019,4 +1019,5 @@ class COPY_HL(IStrategy):
                  proposed_leverage: float, max_leverage: float, entry_tag: str | None, side: str,
                  **kwargs) -> float:
         lev = min(self.LEV.value, max_leverage)
+
         return lev
