@@ -30,7 +30,8 @@ This strategy monitors a specified Hyperliquid wallet address and replicates its
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `max_open_trades` (in `config.json`)| 4 | Maximum number of positions at a given time. Which value to use will depend on the account you copy. |
-| `LEV` (in `COPY_HL.py`) | 6 | Effective leverage to use. Which value to use will depend on the account you copy, and it can be tricky to evaluate |
+| `LEV` (in `COPY_HL.py`) | 6 | Effective leverage to use. Which value to use will depend on the account you copy, and it can be tricky to evaluate (If the trader you’re copying uses cross margin with leverage of 25, that doesn’t mean you should enter 25 here.
+What really matters is the maximum position size they take relative to their total account value. For example, if you’re following an account with 100k USDC in capital, and at some point you notice they hold positions totaling 300k USDC, that implies you’ll need at least 3x leverage—ideally 4x to be safe.) |
 | `change_threshold` (in `COPY_HL.py`)| 0.5 | Minimum position size or position change threshold (% of account) |
 | `ADDRESS_TO_TRACK_TOP` (in `COPY_HL.py`)| Set in code | Hyperliquid wallet address to copy |
 
