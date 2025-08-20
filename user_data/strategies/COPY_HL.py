@@ -943,7 +943,7 @@ class COPY_HL(IStrategy):
                 logger.info(f"Not opening position on {pair} because position size in copied account is too small compared to the copied account equity({ratio_pc:.1f}% < 1%)")
                 return None
 
-            dust_USDC = 1.1
+            dust_USDC = 0.51
             returned_val = position_value_in_copied_account * scale_factor
             returned_val = (returned_val / leverage) - dust_USDC
 
@@ -971,7 +971,7 @@ class COPY_HL(IStrategy):
 
         coin_ticker = trade.pair.replace("/USDC:USDC", "")
 
-        dust_USDC = 1.1
+        dust_USDC = 0.51
 
         if not self._got_perp_data_account_state_successfully :
             return None
@@ -1001,13 +1001,14 @@ class COPY_HL(IStrategy):
                         elif 'decreased' in chg.change_type:
                             return -1.0 * delta / trade.leverage - dust_USDC
                     
-            # for already opened positions, if difference with what it should be in copied account (and scaled) is too large (>5%), adjust to match
+            # for already opened positions, if difference with what it should be in copied account (and scaled) is too large (>10%), adjust to match
             if self.matching_positions_check_output:
                 for pos in self.matching_positions_check_output:
                     logger.info(f"{pos['coin']} → Difference: {pos['diff_pc']:.2f}%   (my total value: {pos['my_value']:.1f})")
                     if pos['coin']==coin_ticker:
-                        if abs(pos['diff_pc'])>5.0:
-                            delta = -1.0 * pos['diff_pc']/100.0 * pos['my_value']
+                        if abs(pos['diff_pc'])>10.0:
+                            #logger.info(pos['diff_pc'])
+                            delta = pos['my_value']/(1.0 + pos['diff_pc']/100.0)-pos['my_value']
                             return delta / trade.leverage - dust_USDC
             return None
             
@@ -1019,5 +1020,4 @@ class COPY_HL(IStrategy):
                  proposed_leverage: float, max_leverage: float, entry_tag: str | None, side: str,
                  **kwargs) -> float:
         lev = min(self.LEV.value, max_leverage)
-
         return lev
