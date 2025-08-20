@@ -124,7 +124,7 @@ POSITIONS SUMMARY
 ================================================================================
 Copied Account Value: $2,439,609.23
 My Account Value:    $1,050.96
-Scale Factor:        0.000431x (interted 2321.3x )
+Scale Factor:        0.000431x (inverted 2321.3x )
 --------------------------------------------------
 POSITIONS TO COPY:
        BTC |  LONG | Size:       0.0001 | Value: $     10.57 ( 0.00%) | Scaled: $      0.00
