@@ -558,7 +558,7 @@ class COPY_HL(IStrategy):
     nb_loop = 1
     _cached_perp_data = None
     _cache_timestamp = None
-    _cache_duration = 15  # seconds
+    _cache_duration = 2  # seconds
     _got_perp_data_account_state_successfully = False
     matching_positions_check_output = None
 
@@ -605,6 +605,18 @@ class COPY_HL(IStrategy):
             # Return cached data if available, otherwise None
             return self._cached_perp_data if self._cached_perp_data else None
         
+    def is_symbol_whitelisted(self, symbol: str) -> bool:
+        """
+        Returns True if the given trading pair symbol is currently in the whitelist.
+        """
+        if not self.dp:
+            # If DataProvider isn't available (e.g., outside strategy context)
+            return False
+
+        # Retrieve current whitelist from DataProvider
+        current_list = self.dp.current_whitelist()
+        return symbol in current_list
+    
     def print_positions_summary(self):
         """
         Print a nicely formatted summary of current positions, scale factor, and comparisons.
@@ -702,7 +714,7 @@ class COPY_HL(IStrategy):
                 # Positions I should have but don't
                 should_have = copied_coins - my_coins
                 if should_have:
-                    logger.info("  Missing positions (should open):")
+                    logger.info("  Missing positions (should open if in whitelist):")
                     for coin in should_have:
                         pos = self.current_positions_to_copy[coin]
                         size = float(pos.size)
@@ -716,11 +728,16 @@ class COPY_HL(IStrategy):
 
                         ratio_pc_copied = pos.position_value / copied_account_value * 100.0
                         significant = "✓" if ratio_pc_copied >= self.change_threshold else "✗"
+
+                        if self.is_symbol_whitelisted(coin):
+                            in_wl = ', in whitelist'
+                        else:
+                            in_wl = ', not in whitelist'
                         
                         logger.info(
                             f"    {coin:>8} | {position_type:>5} | Copied ${pos.position_value:>8.2f} "
                             f"({ratio_pc_copied:>5.2f}% of copied) | "
-                            f"Expected scaled: ${expected_value:>8.2f} ({expected_ratio_pc_my:>5.2f}% of mine) {significant}"
+                            f"Expected scaled: ${expected_value:>8.2f} ({expected_ratio_pc_my:>5.2f}% of mine) {significant} {in_wl}"
                         )
                 
                 # Positions I have but shouldn't
@@ -971,6 +988,8 @@ class COPY_HL(IStrategy):
 
         coin_ticker = trade.pair.replace("/USDC:USDC", "")
 
+        # logger.info(f"min stake: {min_stake}")
+
         dust_USDC = 0.51
 
         if not self._got_perp_data_account_state_successfully :
@@ -994,22 +1013,22 @@ class COPY_HL(IStrategy):
                             logger.info(f"Not increasing or decreasing position on {trade.pair} because position change in copied account is too small compared to the copied account equity({change_ratio_pc:.1f}% < 1%)")
                             return None
 
-                        delta = abs(float(chg.old_position_value) - float(chg.new_position_value)) * scale_factor
+                        delta_stake = abs(float(chg.old_position_value) - float(chg.new_position_value)) * scale_factor
                         
                         if 'increased' in chg.change_type:
-                            return delta / trade.leverage - dust_USDC
+                            return delta_stake / trade.leverage - dust_USDC
                         elif 'decreased' in chg.change_type:
-                            return -1.0 * delta / trade.leverage - dust_USDC
+                            return -1.0 * delta_stake / trade.leverage - dust_USDC
                     
             # for already opened positions, if difference with what it should be in copied account (and scaled) is too large (>10%), adjust to match
             if self.matching_positions_check_output:
                 for pos in self.matching_positions_check_output:
-                    logger.info(f"{pos['coin']} → Difference: {pos['diff_pc']:.2f}%   (my total value: {pos['my_value']:.1f})")
+                    logger.info(f"{pos['coin']} → Difference: {pos['diff_pc']:.2f}%   (my total value: {pos['my_value']:.1f}) ; ||>10% will trigger a size correction.")
                     if pos['coin']==coin_ticker:
                         if abs(pos['diff_pc'])>10.0:
                             #logger.info(pos['diff_pc'])
-                            delta = pos['my_value']/(1.0 + pos['diff_pc']/100.0)-pos['my_value']
-                            return delta / trade.leverage - dust_USDC
+                            delta_stake = pos['my_value']/(1.0 + pos['diff_pc']/100.0)-pos['my_value']
+                            return delta_stake / trade.leverage - dust_USDC
             return None
             
         except Exception as e:
