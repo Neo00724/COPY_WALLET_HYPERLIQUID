@@ -122,23 +122,29 @@ The strategy provides detailed logging including:
 ================================================================================
 POSITIONS SUMMARY
 ================================================================================
-Copied Account Value: $2,439,609.23
-My Account Value:    $1,050.96
-Scale Factor:        0.000431x (inverted 2321.3x )
+Copied Account Value: $2,054,213.79
+My Account Value:    $1,085.99
+Scale Factor:        0.000529x (inverted 1891.6x )
 --------------------------------------------------
 POSITIONS TO COPY:
-       BTC |  LONG | Size:       0.0001 | Value: $     10.57 ( 0.00%) | Scaled: $      0.00
-       ETH |  LONG | Size:       0.0001 | Value: $      0.44 ( 0.00%) | Scaled: $      0.00
-      HYPE |  LONG | Size:   87720.0200 | Value: $4188630.96 (171.69%) | Scaled: $   1804.43
+       ETH |  LONG | Size:       0.0059 | Value: $     26.45 ( 0.00%) | Scaled: $      0.01
+       LTC |  LONG | Size:   18345.1600 | Value: $2023287.70 (98.49%) | Scaled: $   1069.64
+      HYPE |  LONG | Size:  133827.7300 | Value: $5933252.41 (288.83%) | Scaled: $   3136.70
+      WLFI |  LONG | Size: 6484884.0000 | Value: $1440876.38 (70.14%) | Scaled: $    761.74
 --------------------------------------------------
 MY OPEN POSITIONS:
-      HYPE | LONG  | Stake: $    304.92 | Value: $   1829.53 (174.08%) | Leverage: 6.0x
+      HYPE | LONG  | Stake: $    496.94 | Value: $   2981.67 (274.56%) | Leverage: 6.0x
+       LTC | LONG  | Stake: $    174.56 | Value: $   1047.39 (96.45%) | Leverage: 6.0x
 --------------------------------------------------
 POSITION MATCHING ANALYSIS:
   Matching positions:
-        HYPE | Copied: $4188630.96 -> Expected: $ 1804.43 | Actual: $ 1829.53 | Diff:    1.4%
-  Missing positions (should open): None
+        HYPE | Copied: $5933252.41 -> Expected: $ 3136.70 | Actual: $ 2981.67 | Diff:   -4.9%
+         LTC | Copied: $2023287.70 -> Expected: $ 1069.64 | Actual: $ 1047.39 | Diff:   -2.1%
+  Missing positions (should open if in whitelist):
+        WLFI |  LONG | Copied $1440876.38 (70.14% of copied) | Expected scaled: $  761.74 (70.14% of mine) ✓ , not in whitelist
 ================================================================================
+HYPE → Difference: -4.94%   (my total value: 2981.7) ; ||>10% will trigger a size correction.
+LTC → Difference: -2.08%   (my total value: 1047.4) ; ||>10% will trigger a size correction.
 ```
 
 ## Disclaimers
