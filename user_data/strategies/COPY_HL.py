@@ -549,6 +549,7 @@ class COPY_HL(IStrategy):
     # Tunable parameters
     LEV = IntParameter(1, 6, default=6, space='buy', optimize=False)  # Leverage to use
     change_threshold = 0.5 # in %
+    adjustement_threshold = 10.0 # in %
     ADDRESS_TO_TRACK = ADDRESS_TO_TRACK_TOP
 
     # State variables (do not touch)
@@ -558,7 +559,7 @@ class COPY_HL(IStrategy):
     nb_loop = 1
     _cached_perp_data = None
     _cache_timestamp = None
-    _cache_duration = 2  # seconds
+    _cache_duration = 5  # seconds
     _got_perp_data_account_state_successfully = False
     matching_positions_check_output = None
 
@@ -642,7 +643,7 @@ class COPY_HL(IStrategy):
                 
                 logger.info(f"Copied Account Value: ${copied_account_value:,.2f}")
                 logger.info(f"My Account Value:    ${my_account_value:,.2f}")
-                logger.info(f"Scale Factor:        {scale_factor:.6f}x (interted {1.0/scale_factor:.1f}x )")
+                logger.info(f"Scale Factor:        {scale_factor:.6f}x (inverted {1.0/scale_factor:.1f}x )")
                 logger.info("-" * 50)
             else:
                 logger.info("No cached perp data available")
@@ -1023,9 +1024,9 @@ class COPY_HL(IStrategy):
             # for already opened positions, if difference with what it should be in copied account (and scaled) is too large (>10%), adjust to match
             if self.matching_positions_check_output:
                 for pos in self.matching_positions_check_output:
-                    logger.info(f"{pos['coin']} → Difference: {pos['diff_pc']:.2f}%   (my total value: {pos['my_value']:.1f}) ; ||>10% will trigger a size correction.")
+                    logger.info(f"{pos['coin']} → Difference: {pos['diff_pc']:.2f}%   (my total value: {pos['my_value']:.1f}) ; ||>{self.adjustement_threshold:.0f}% will trigger a size correction.")
                     if pos['coin']==coin_ticker:
-                        if abs(pos['diff_pc'])>10.0:
+                        if abs(pos['diff_pc'])>self.adjustement_threshold:
                             #logger.info(pos['diff_pc'])
                             delta_stake = pos['my_value']/(1.0 + pos['diff_pc']/100.0)-pos['my_value']
                             return delta_stake / trade.leverage - dust_USDC
