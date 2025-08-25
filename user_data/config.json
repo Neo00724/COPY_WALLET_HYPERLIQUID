@@ -92,7 +92,8 @@
     "initial_state": "running",
     "force_entry_enable": true,
     "internals": {
-        "process_throttle_secs": 15
+        "process_throttle_secs": 10
     }
 
 }
+
