@@ -37,18 +37,12 @@
         "walletAddress": "",
         "privateKey": "",
         "ccxt_config": {
-            "options": {
-                "vaultAddress": ""
-            },
             "enableRateLimit": true,
             "rateLimit": 300
         },
         "ccxt_async_config": {
             "enableRateLimit": true,
-            "rateLimit": 300,
-            "options": {
-                "vaultAddress": ""
-            }
+            "rateLimit": 300
         },
         "pair_whitelist": [],
         "pair_blacklist": [
@@ -57,8 +51,8 @@
     "pairlists": [
         {
             "method": "RemotePairList",
-            "number_assets": 50,
-            "pairlist_url": "https://remotepairlist.com?q=4885f6046bea5db4"
+            "number_assets": 15,
+            "pairlist_url": "https://remotepairlist.com?q=1fa19388d69e4acb"
         }
     ],
     "edge": {
@@ -100,4 +94,5 @@
     "internals": {
         "process_throttle_secs": 15
     }
+
 }
