@@ -1,11 +1,11 @@
-# Hyperliquid Copy Trading Strategy
+# Hyperliquid Perp Copy Trading Strategy
 
-A Freqtrade strategy that automatically copies trades from a Hyperliquid perpetual futures account to your Freqtrade bot.
+A Freqtrade strategy that automatically copies trades from a Hyperliquid perpetual futures (perp) account to your Freqtrade bot.
 More about Freqtrade: https://www.freqtrade.io/en/stable/
 
 ## Overview
 
-This strategy monitors a specified Hyperliquid wallet address and replicates its trading positions in your Freqtrade bot with appropriate position sizing based on account value scaling, and an "effective" leverage asssumption.
+This strategy monitors a specified Hyperliquid wallet address and replicates its perp trading positions in your Freqtrade bot with appropriate position sizing based on account value scaling, and an "effective" leverage asssumption.
 
 ## Features
 
