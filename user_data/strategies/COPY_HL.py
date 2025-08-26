@@ -18,6 +18,7 @@ from copy import deepcopy
 logger = logging.getLogger(__name__)
 
 ADDRESS_TO_TRACK_TOP = "0x95b8b411653328db32f59b143c6d45f8501e2b35"
+# also 0x4b66f4048a0a90fd5ff44abbe5d68332656b78b8 is pretty good
 
 #####################################################################################################################################################################################################
 # Classes used to manage the copied wallet position tracking
@@ -539,8 +540,8 @@ class COPY_HL(IStrategy):
     minimal_roi = {
         "0": 5000.0  # Effectively disables ROI
     }
-    stoploss = -0.95
-    timeframe = '5m'
+    stoploss = -0.90 # protects against liquidation, but there is a chance it will trigger a trade exit that the copied account will not exit, namely if he is using crossed margin
+    timeframe = '1h' # this could be any timeframe: the bot will evaluate entries at every 'process_throttle_secs' (in config.json) since process_only_new_candles == False
     startup_candle_count: int = 0
     can_short: bool = False
     process_only_new_candles: bool = False
@@ -1041,4 +1042,5 @@ class COPY_HL(IStrategy):
                  **kwargs) -> float:
         lev = min(self.LEV.value, max_leverage)
         return lev
+
 
