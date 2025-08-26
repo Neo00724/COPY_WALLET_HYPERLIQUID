@@ -560,7 +560,7 @@ class COPY_HL(IStrategy):
     nb_loop = 1
     _cached_perp_data = None
     _cache_timestamp = None
-    _cache_duration = 5  # seconds
+    _cache_duration = 1  # seconds
     _got_perp_data_account_state_successfully = False
     matching_positions_check_output = None
 
@@ -1042,5 +1042,6 @@ class COPY_HL(IStrategy):
                  **kwargs) -> float:
         lev = min(self.LEV.value, max_leverage)
         return lev
+
 
 
