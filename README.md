@@ -84,7 +84,7 @@ The strategy creates a `position_data/` directory with:
 ## Usage
 
 1. **Install Dependencies**:
-`Docker`
+`docker`, `docker compose`
 
 2. **Configure Strategy**:
 ```python
