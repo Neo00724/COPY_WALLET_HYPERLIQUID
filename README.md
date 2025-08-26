@@ -99,6 +99,7 @@ Adjust `max_open_trades` (in `config.json`) and `LEV` (in `COPY_HL.py`) for the 
 ```bash
 docker compose build
 docker compose up
+# optionally use 'docker compose up -d' to run as persistent background deamon process
 ```
 
 ## Safety Features
