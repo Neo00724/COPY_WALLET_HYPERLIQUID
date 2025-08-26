@@ -540,7 +540,7 @@ class COPY_HL(IStrategy):
         "0": 5000.0  # Effectively disables ROI
     }
     stoploss = -0.95
-    timeframe = '1m'
+    timeframe = '5m'
     startup_candle_count: int = 0
     can_short: bool = False
     process_only_new_candles: bool = False
@@ -1041,3 +1041,4 @@ class COPY_HL(IStrategy):
                  **kwargs) -> float:
         lev = min(self.LEV.value, max_leverage)
         return lev
+
