@@ -95,7 +95,7 @@ ADDRESS_TO_TRACK_TOP = "0x1234567890abcdef1234567890abcdef12345678"
 ```
 Adjust `max_open_trades` (in `config.json`) and `LEV` (in `COPY_HL.py`) for the account to be copied.
 
-3. **Run Freqtrade**:
+3. **Start Freqtrade** open a terminal in the folder containing the file `docker-compose.yml` and run commands:
 ```bash
 docker compose build
 docker compose up
