@@ -2,6 +2,7 @@
     "max_open_trades": 4,
     "stake_currency": "USDC",
     "stake_amount": 16,
+    "_comment": "stake_amount is not used",
     "tradable_balance_ratio": 0.99,
     "amount_reserve_percent": 0.01,
     "available_capital": 1000.0,
@@ -96,4 +97,5 @@
     }
 
 }
+
 
