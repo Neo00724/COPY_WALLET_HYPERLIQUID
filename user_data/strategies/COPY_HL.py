@@ -1016,8 +1016,6 @@ class COPY_HL(IStrategy):
         coin_ticker = trade.pair.replace("/USDC:USDC", "")
         self.wallets.update()
 
-        logger.info('lala00')
-
         dust_USDC = 0.51
 
         if not self._got_perp_data_account_state_successfully :
@@ -1028,9 +1026,8 @@ class COPY_HL(IStrategy):
                 self._is_cooldown_after_position_change = False
 
         if self._is_cooldown_after_position_change:
+            logger.info(f"Not doing position size change because of the cooldown of {self._cooldown_seconds_after_position_change} seconds.") 
             return None
-        else:
-            logger.info(f"Not doing position size change because of the cooldown of {self._cooldown_seconds_after_position_change} seconds.")
 
         try:
             if not self._cached_perp_data:
