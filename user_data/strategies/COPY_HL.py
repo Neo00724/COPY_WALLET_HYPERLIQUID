@@ -17,8 +17,7 @@ from copy import deepcopy
 
 logger = logging.getLogger(__name__)
 
-ADDRESS_TO_TRACK_TOP = "0x95b8b411653328db32f59b143c6d45f8501e2b35"
-# also 0x4b66f4048a0a90fd5ff44abbe5d68332656b78b8 is pretty good
+ADDRESS_TO_TRACK_TOP = "0x4b66f4048a0a90fd5ff44abbe5d68332656b78b8"
 
 #####################################################################################################################################################################################################
 # Classes used to manage the copied wallet position tracking
@@ -540,8 +539,8 @@ class COPY_HL(IStrategy):
     minimal_roi = {
         "0": 5000.0  # Effectively disables ROI
     }
-    stoploss = -0.90 # protects against liquidation, but there is a chance it will trigger a trade exit that the copied account will not exit, namely if he is using crossed margin
-    timeframe = '1h' # this could be any timeframe: the bot will evaluate entries at every 'process_throttle_secs' (in config.json) since process_only_new_candles == False
+    stoploss = -0.95
+    timeframe = '1m'
     startup_candle_count: int = 0
     can_short: bool = False
     process_only_new_candles: bool = False
@@ -560,7 +559,7 @@ class COPY_HL(IStrategy):
     nb_loop = 1
     _cached_perp_data = None
     _cache_timestamp = None
-    _cache_duration = 1  # seconds
+    _cache_duration = 5  # seconds
     _got_perp_data_account_state_successfully = False
     matching_positions_check_output = None
 
@@ -577,6 +576,10 @@ class COPY_HL(IStrategy):
         'entry': 'gtc',
         'exit': 'gtc'
     }
+
+    def get_stake_total(self) -> float:
+        stake = self.config['stake_currency']     # e.g. "USDC"
+        return self.wallets.get_total(stake) 
 
     def GET_PERP_ACCOUNT_STATUS(self, address):
         """Get account status with caching and error handling"""
@@ -639,7 +642,7 @@ class COPY_HL(IStrategy):
             # Account values and scale factor
             if self._cached_perp_data:
                 copied_account_value = float(self._cached_perp_data['marginSummary']['accountValue'])
-                my_account_value = float(self.config["available_capital"]) + Trade.get_total_closed_profit()
+                my_account_value = float(self.get_stake_total())
                 scale_factor = my_account_value / copied_account_value
                 
                 logger.info(f"Copied Account Value: ${copied_account_value:,.2f}")
@@ -935,7 +938,7 @@ class COPY_HL(IStrategy):
                 return None
                 
             copied_account_value = float(self._cached_perp_data['marginSummary']['accountValue'])
-            my_account_value = float(self.config["available_capital"]) + Trade.get_total_closed_profit()
+            my_account_value = float(self.get_stake_total())
             scale_factor = my_account_value / copied_account_value
 
             # Look in both position changes and current positions
@@ -990,6 +993,10 @@ class COPY_HL(IStrategy):
 
         coin_ticker = trade.pair.replace("/USDC:USDC", "")
 
+        # logger.info(max_stake)
+
+        #logger.info(Trade.get_total_closed_profit())
+
         # logger.info(f"min stake: {min_stake}")
 
         dust_USDC = 0.51
@@ -1003,7 +1010,7 @@ class COPY_HL(IStrategy):
             
             if self.copied_account_position_changes:
                 copied_account_value = float(self._cached_perp_data['marginSummary']['accountValue'])
-                my_account_value = float(self.config["available_capital"]) + Trade.get_total_closed_profit()
+                my_account_value = float(self.get_stake_total())
                 scale_factor = my_account_value / copied_account_value
 
                 # for detected changes in the copied account
@@ -1030,6 +1037,8 @@ class COPY_HL(IStrategy):
                         if abs(pos['diff_pc'])>self.adjustement_threshold:
                             #logger.info(pos['diff_pc'])
                             delta_stake = pos['my_value']/(1.0 + pos['diff_pc']/100.0)-pos['my_value']
+                            logger.info(delta_stake)
+                            logger.info(delta_stake / trade.leverage)
                             return delta_stake / trade.leverage - dust_USDC
             return None
             
@@ -1042,6 +1051,3 @@ class COPY_HL(IStrategy):
                  **kwargs) -> float:
         lev = min(self.LEV.value, max_leverage)
         return lev
-
-
-
