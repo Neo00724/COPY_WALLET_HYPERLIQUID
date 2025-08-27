@@ -622,7 +622,7 @@ class COPY_HL(IStrategy):
         current_list = self.dp.current_whitelist()
         return symbol in current_list
     
-    def print_positions_summary(self):
+    def check_print_positions_summary(self):
         """
         Print a nicely formatted summary of current positions, scale factor, and comparisons.
 
@@ -633,6 +633,7 @@ class COPY_HL(IStrategy):
                 - 'my_value': float # actual USD value of my position
         """
         matching_positions_output = []
+        self.wallets.update()
 
         try:
             logger.info("=" * 80)
@@ -810,7 +811,7 @@ class COPY_HL(IStrategy):
             self.my_open_positions = []
             self._got_perp_data_account_state_successfully = False
 
-        self.matching_positions_check_output = self.print_positions_summary()
+        self.matching_positions_check_output = self.check_print_positions_summary()
 
     def populate_indicators(self, df: pd.DataFrame, metadata: dict) -> pd.DataFrame:
         coin_ticker = metadata['pair'].replace("/USDC:USDC", "")
@@ -928,6 +929,7 @@ class COPY_HL(IStrategy):
         # You do not have to ensure that min_stake <= returned_value <= max_stake. Trades will succeed as the returned value will be clamped to supported range and this action will be logged.
 
         coin_ticker = pair.replace("/USDC:USDC", "")
+        self.wallets.update()
 
         if not self._got_perp_data_account_state_successfully :
             return None
@@ -992,6 +994,7 @@ class COPY_HL(IStrategy):
         #                Optionally, return a tuple with a 2nd element with an order reason
 
         coin_ticker = trade.pair.replace("/USDC:USDC", "")
+        self.wallets.update()
 
         # logger.info(max_stake)
 
