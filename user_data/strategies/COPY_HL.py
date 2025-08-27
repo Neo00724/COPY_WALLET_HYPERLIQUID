@@ -1,5 +1,4 @@
 import pandas as pd
-from datetime import datetime
 from freqtrade.strategy import (IStrategy, IntParameter)
 from freqtrade.persistence import Trade
 import logging
@@ -10,7 +9,7 @@ from pathlib import Path
 import json
 import os
 import csv
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict
 from copy import deepcopy
@@ -560,6 +559,9 @@ class COPY_HL(IStrategy):
     _cached_perp_data = None
     _cache_timestamp = None
     _cache_duration = 5  # seconds
+    _is_cooldown_after_position_change = False
+    _cooldown_seconds_after_position_change = 100 # seconds
+    _time_of_change = None
     _got_perp_data_account_state_successfully = False
     matching_positions_check_output = None
 
@@ -583,13 +585,13 @@ class COPY_HL(IStrategy):
 
     def GET_PERP_ACCOUNT_STATUS(self, address):
         """Get account status with caching and error handling"""
-        self._got_perp_data_account_state_successfully = False
         try:
             # Use cached data if recent
             current_time = time.time()
             if (self._cached_perp_data is not None and 
                 self._cache_timestamp is not None and
                 current_time - self._cache_timestamp < self._cache_duration):
+                self._got_perp_data_account_state_successfully = True
                 return self._cached_perp_data
 
             from hyperliquid.info import Info
@@ -641,8 +643,9 @@ class COPY_HL(IStrategy):
             logger.info("=" * 80)
             
             # Account values and scale factor
-            if self._cached_perp_data:
-                copied_account_value = float(self._cached_perp_data['marginSummary']['accountValue'])
+            perp_data = self.GET_PERP_ACCOUNT_STATUS(self.ADDRESS_TO_TRACK)
+            if perp_data:
+                copied_account_value = float(perp_data['marginSummary']['accountValue'])
                 my_account_value = float(self.get_stake_total())
                 scale_factor = my_account_value / copied_account_value
                 
@@ -677,8 +680,10 @@ class COPY_HL(IStrategy):
             if self.my_open_positions:
                 for trade in self.my_open_positions:
                     coin = trade.pair.replace("/USDC:USDC", "")
+                    ticker = self.dp.ticker(trade.pair)
+                    rate = ticker['last']
+                    position_value = trade.amount * rate
                     stake_amount = trade.stake_amount
-                    position_value = stake_amount * trade.leverage
                     ratio_pc = position_value / my_account_value * 100.0
                     
                     logger.info(f"  {coin:>8} | LONG  | Stake: ${stake_amount:>10.2f} | "
@@ -704,7 +709,10 @@ class COPY_HL(IStrategy):
                         my_trade = next(t for t in self.my_open_positions if t.pair.replace("/USDC:USDC", "") == coin)
                         
                         copied_value = copied_pos.position_value
-                        my_value = my_trade.stake_amount * my_trade.leverage
+                        ticker = self.dp.ticker(my_trade.pair)
+                        rate = ticker['last']
+                        logger.info(f"amount of {my_trade.pair}: {my_trade.amount}")
+                        my_value = my_trade.amount * rate
                         expected_value = copied_value * scale_factor
                         diff_pc = ((my_value - expected_value) / expected_value * 100) if expected_value > 0 else 0.0
                         
@@ -752,7 +760,10 @@ class COPY_HL(IStrategy):
                     logger.info("  Extra positions (should close):")
                     for coin in shouldnt_have:
                         my_trade = next(t for t in self.my_open_positions if t.pair.replace("/USDC:USDC", "") == coin)
-                        logger.info(f"    {coin:>8} | LONG  | ${my_trade.stake_amount * my_trade.leverage:>8.2f}")
+                        ticker = self.dp.ticker(my_trade.pair)
+                        rate = ticker['last']
+                        my_value = trade.amount * rate
+                        logger.info(f"    {coin:>8} | LONG  | ${my_value:>8.2f}")
             
             logger.info("=" * 80)
             return matching_positions_output
@@ -766,6 +777,11 @@ class COPY_HL(IStrategy):
         Called only once after bot instantiation.
         :param **kwargs: Ensure to keep this here so updates to this won't break your strategy.
         """
+        # because in Live (real money, real account) the value returned by self.dp.ticker(trade.pair) or trade.amount takes some time (> 1 minute) to be refreshed, even if we call self.wallets.update()
+        if self.config["runmode"].value in ('live'):
+            self._cooldown_seconds_after_position_change = 120
+        elif self.config["runmode"].value in ('dry_run'):
+            self._cooldown_seconds_after_position_change = 5
 
     def bot_loop_start(self, current_time: datetime, **kwargs) -> None:
         """
@@ -819,12 +835,14 @@ class COPY_HL(IStrategy):
 
         if not self._got_perp_data_account_state_successfully: # skip (do nothing) if API call to get perp data copied account state failed
             return df
+        
+        perp_data = self.GET_PERP_ACCOUNT_STATUS(self.ADDRESS_TO_TRACK)
 
         # Handle position changes
         if self.copied_account_position_changes:
             for chg in self.copied_account_position_changes:
                 if coin_ticker in chg.coin:
-                    copied_account_value = float(self._cached_perp_data['marginSummary']['accountValue'])
+                    copied_account_value = float(perp_data['marginSummary']['accountValue'])
                     #logger.info(f"copied account value: {copied_account_value}")
                     position_value_in_copied_account = float(chg.new_position_value) # in USDC
                     if float(chg.new_size)<0.0: # check if short, just in case
@@ -884,9 +902,10 @@ class COPY_HL(IStrategy):
         """Check if position is significant enough to copy"""
         try:
             if not self._cached_perp_data:
-                return False
+                return None
                 
-            copied_account_value = float(self._cached_perp_data['marginSummary']['accountValue'])
+            perp_data = self.GET_PERP_ACCOUNT_STATUS(self.ADDRESS_TO_TRACK)
+            copied_account_value = float(perp_data['marginSummary']['accountValue'])
             #logger.info(f"copied account value: {copied_account_value}")
             min_threshold = copied_account_value / (100.0/self.change_threshold)  # 1% threshold
 
@@ -895,7 +914,7 @@ class COPY_HL(IStrategy):
             return position_value > min_threshold
         except Exception as e:
             logger.error(f"Error checking position significance: {e}")
-            return False
+            return None
 
     def check_mistaken_short(self, df, coin_ticker):
         """
@@ -938,8 +957,9 @@ class COPY_HL(IStrategy):
             if not self._cached_perp_data:
                 logger.error("No cached perp data available")
                 return None
-                
-            copied_account_value = float(self._cached_perp_data['marginSummary']['accountValue'])
+            
+            perp_data = self.GET_PERP_ACCOUNT_STATUS(self.ADDRESS_TO_TRACK)
+            copied_account_value = float(perp_data['marginSummary']['accountValue'])
             my_account_value = float(self.get_stake_total())
             scale_factor = my_account_value / copied_account_value
 
@@ -996,23 +1016,30 @@ class COPY_HL(IStrategy):
         coin_ticker = trade.pair.replace("/USDC:USDC", "")
         self.wallets.update()
 
-        # logger.info(max_stake)
-
-        #logger.info(Trade.get_total_closed_profit())
-
-        # logger.info(f"min stake: {min_stake}")
+        logger.info('lala00')
 
         dust_USDC = 0.51
 
         if not self._got_perp_data_account_state_successfully :
             return None
 
+        if self._time_of_change is not None:
+            if datetime.now() > self._time_of_change + timedelta(seconds=self._cooldown_seconds_after_position_change):
+                self._is_cooldown_after_position_change = False
+
+        if self._is_cooldown_after_position_change:
+            return None
+        else:
+            logger.info(f"Not doing position size change because of the cooldown of {self._cooldown_seconds_after_position_change} seconds.")
+
         try:
             if not self._cached_perp_data:
                 return None
             
+            perp_data = self.GET_PERP_ACCOUNT_STATUS(self.ADDRESS_TO_TRACK)
+            
             if self.copied_account_position_changes:
-                copied_account_value = float(self._cached_perp_data['marginSummary']['accountValue'])
+                copied_account_value = float(perp_data['marginSummary']['accountValue'])
                 my_account_value = float(self.get_stake_total())
                 scale_factor = my_account_value / copied_account_value
 
@@ -1026,6 +1053,9 @@ class COPY_HL(IStrategy):
                             return None
 
                         delta_stake = abs(float(chg.old_position_value) - float(chg.new_position_value)) * scale_factor
+
+                        self._time_of_change = datetime.now()
+                        self._is_cooldown_after_position_change = True 
                         
                         if 'increased' in chg.change_type:
                             return delta_stake / trade.leverage - dust_USDC
@@ -1042,6 +1072,8 @@ class COPY_HL(IStrategy):
                             delta_stake = pos['my_value']/(1.0 + pos['diff_pc']/100.0)-pos['my_value']
                             logger.info(delta_stake)
                             logger.info(delta_stake / trade.leverage)
+                            self._time_of_change = datetime.now()
+                            self._is_cooldown_after_position_change = True
                             return delta_stake / trade.leverage - dust_USDC
             return None
             
