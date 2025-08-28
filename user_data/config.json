@@ -39,11 +39,11 @@
         "privateKey": "",
         "ccxt_config": {
             "enableRateLimit": true,
-            "rateLimit": 300
+            "rateLimit": 150
         },
         "ccxt_async_config": {
             "enableRateLimit": true,
-            "rateLimit": 300
+            "rateLimit": 150
         },
         "pair_whitelist": [],
         "pair_blacklist": [
@@ -76,7 +76,7 @@
         "chat_id": ""
     },
     "api_server": {
-        "enabled": false,
+        "enabled": true,
         "listen_ip_address": "0.0.0.0",
         "listen_port": 8080,
         "verbosity": "info",
@@ -97,6 +97,7 @@
     }
 
 }
+
 
 
 
