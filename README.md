@@ -83,7 +83,7 @@ The strategy creates a `position_data/` directory with:
 - `last_positions.csv` - Current position snapshots  
 - `changes_log.csv` - All detected changes
 
-- `show_PnL.py` shows current bot's PnL (all and closed) and metrics, if the rest API server is ON.
+- `show_PnL.py` shows current bot's PnL (all and closed) and metrics, works only if the rest API server is ON and USERNAME and PASSWORD are consistent with values in `config.json` .
 
 ## Usage
 
