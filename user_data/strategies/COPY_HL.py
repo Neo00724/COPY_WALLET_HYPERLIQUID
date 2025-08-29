@@ -540,7 +540,7 @@ class COPY_HL(IStrategy):
         "0": 5000.0  # Effectively disables ROI
     }
     stoploss = -0.95
-    timeframe = '1m'
+    timeframe = '5m'
     startup_candle_count: int = 0
     can_short: bool = False
     process_only_new_candles: bool = False
@@ -623,7 +623,7 @@ class COPY_HL(IStrategy):
 
         # Retrieve current whitelist from DataProvider
         current_list = self.dp.current_whitelist()
-        return symbol in current_list
+        return any(symbol in s for s in current_list)
     
     def check_print_positions_summary(self):
         """
@@ -729,7 +729,7 @@ class COPY_HL(IStrategy):
                 # Positions I should have but don't
                 should_have = copied_coins - my_coins
                 if should_have:
-                    logger.info("  Missing positions (should open if in whitelist):")
+                    logger.info("  Missing positions (should open if in whitelist and not Short, and significant size):")
                     for coin in should_have:
                         pos = self.current_positions_to_copy[coin]
                         size = float(pos.size)
@@ -1085,5 +1085,3 @@ class COPY_HL(IStrategy):
                  **kwargs) -> float:
         lev = min(self.LEV.value, max_leverage)
         return lev
-
-
