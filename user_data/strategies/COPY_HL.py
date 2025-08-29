@@ -937,6 +937,7 @@ class COPY_HL(IStrategy):
 
     def populate_exit_trend(self, dataframe: pd.DataFrame, metadata: dict) -> pd.DataFrame:
         dataframe.loc[dataframe['signal'] == 0, 'exit_long'] = 1
+        dataframe.loc[dataframe['signal'] == 0, 'exit_short'] = 1
         return dataframe
 
     def custom_stake_amount(self, pair: str, current_time: datetime, current_rate: float,
@@ -1084,4 +1085,5 @@ class COPY_HL(IStrategy):
                  **kwargs) -> float:
         lev = min(self.LEV.value, max_leverage)
         return lev
+
 
