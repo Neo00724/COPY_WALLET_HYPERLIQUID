@@ -564,8 +564,8 @@ class COPY_HL(IStrategy):
     _cache_duration = 5  # seconds
     _is_cooldown_after_position_change = False
     _cooldown_seconds_after_position_change = 100 # seconds
-    # I noticed that with real money (an issue not seen in dry-run), it can take up to 1 minute for the position size to be updated by Freqtrade,
-    # even when calling self.wallets.update(). If you don’t wait long enough, it can cause an infinite loop of position increases and decreases.
+    # I noticed that with real money (an issue not seen in dry-run), it can take about 1 minute or more for the position size to be updated by Freqtrade,
+    # even when calling self.wallets.update(). If you don’t wait long enough after a position size change, it can cause an infinite loop of position increases and decreases.
     # any suggestion to improve this would be apreciated
     _time_of_change = None
     _got_perp_data_account_state_successfully = False
@@ -1090,4 +1090,5 @@ class COPY_HL(IStrategy):
                  **kwargs) -> float:
         lev = min(self.LEV.value, max_leverage)
         return lev
+
 
