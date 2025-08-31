@@ -541,6 +541,8 @@ class COPY_HL(IStrategy):
     }
     stoploss = -0.95
     timeframe = '5m'
+    # The bot will iterate every process_throttle_secs since process_only_new_candles is set to false. Therefore the timeframe is basically irrelevant for this strategy.
+    # In theory, you could even increase it to 15m, 1h, or more, and it should not affect the bot. I ended up setting it to 5m, just in case.
     startup_candle_count: int = 0
     can_short: bool = False
     process_only_new_candles: bool = False
@@ -562,6 +564,9 @@ class COPY_HL(IStrategy):
     _cache_duration = 5  # seconds
     _is_cooldown_after_position_change = False
     _cooldown_seconds_after_position_change = 100 # seconds
+    # I noticed that with real money (an issue not seen in dry-run), it can take up to 1 minute for the position size to be updated by Freqtrade,
+    # even when calling self.wallets.update(). If you don’t wait long enough, it can cause an infinite loop of position increases and decreases.
+    # any suggestion to improve this would be apreciated
     _time_of_change = None
     _got_perp_data_account_state_successfully = False
     matching_positions_check_output = None
@@ -1085,3 +1090,4 @@ class COPY_HL(IStrategy):
                  **kwargs) -> float:
         lev = min(self.LEV.value, max_leverage)
         return lev
+
