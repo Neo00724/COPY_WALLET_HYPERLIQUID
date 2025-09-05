@@ -93,7 +93,7 @@ The strategy creates a `position_data/` directory with:
 2. **Configure Strategy**:
 ```python
 # In `COPY_HL.py`, set your target address
-ADDRESS_TO_TRACK_TOP = "0x1234567890abcdef1234567890abcdef12345678"
+ADDRESS_TO_TRACK_TOP = "0x95b8b411653328db32f59b143c6d45f8501e2b35"
 ```
 Adjust `max_open_trades` (in `config.json`) and `LEV` (in `COPY_HL.py`) for the account to be copied.
 
