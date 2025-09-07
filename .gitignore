@@ -1,3 +1,4 @@
 user_data/strategies/position_data
 *.log
 user_data/tradesv3.sqlite*
+*.log

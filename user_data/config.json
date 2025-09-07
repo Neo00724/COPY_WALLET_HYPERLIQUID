@@ -34,9 +34,6 @@
         "order_book_top": 20
     },
     "exchange": {
-        "name": "hyperliquid",
-        "walletAddress": "",
-        "privateKey": "",
         "ccxt_config": {
             "enableRateLimit": true,
             "rateLimit": 150
@@ -70,24 +67,14 @@
         "max_trade_duration_minute": 28800,
         "remove_pumps": false
     },
-    "telegram": {
-        "enabled": false,
-        "token": "",
-        "chat_id": ""
-    },
     "api_server": {
         "enabled": true,
         "listen_ip_address": "0.0.0.0",
-        "listen_port": 8080,
         "verbosity": "info",
-        "enable_openapi": false,
         "Force_entry": true,
         "forcebuy_enable": true,
         "force_entry_enable": true,
-        "jwt_secret_key": "d1654caf3c530f6b037ae59a999d9d9328dec66bdd68799112cf1ba7d65276a3",
-        "CORS_origins": [],
-        "username": "ft",
-        "password": "kamala"
+        "CORS_origins": []
     },
     "bot_name": "COPY_HL",
     "initial_state": "running",

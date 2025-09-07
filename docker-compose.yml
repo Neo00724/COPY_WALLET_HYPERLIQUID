@@ -6,6 +6,8 @@ services:
     # Use plotting image
     # image: freqtradeorg/freqtrade:develop_plot
     # Build step - only needed when additional dependencies are needed
+    env_file:
+      - path: .env
     build:
       context: .
       dockerfile: "./Dockerfile.technical"
