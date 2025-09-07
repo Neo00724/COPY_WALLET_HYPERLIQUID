@@ -91,14 +91,38 @@ The strategy creates a `position_data/` directory with:
 1. **Install Dependencies**:
 `docker`, `docker compose`
 
-2. **Configure Strategy**:
+2. **Configure Environment Variables**:
+   - **Modify `.env` file**: Update all placeholder values with your actual credentials:
+     ```bash
+     # Exchange credentials
+     FREQTRADE__EXCHANGE__KEY=Your_Actual_Exchange_Key
+     FREQTRADE__EXCHANGE__SECRET=Your_Actual_Exchange_Secret
+     
+     # Telegram (optional)
+     FREQTRADE__TELEGRAM__TOKEN=Your_Telegram_Bot_Token
+     FREQTRADE__TELEGRAM__CHAT_ID=Your_Telegram_Chat_ID
+     
+     # API Server credentials
+     FREQTRADE__API_SERVER__USERNAME=YourUsername
+     FREQTRADE__API_SERVER__PASSWORD=YourSecurePassword
+     FREQTRADE__API_SERVER__JWT_SECRET_KEY=Your_JWT_Secret_Key
+     FREQTRADE__API_SERVER__WS_TOKEN=Your_WebSocket_Token
+     ```
+   
+   - **Secure the `.env` file**:
+     ```bash
+     chmod 600 .env
+     ```
+     This ensures only you can read/write the file containing sensitive credentials.
+
+3. **Configure Strategy**:
 ```python
 # In `COPY_HL.py`, set your target address
 ADDRESS_TO_TRACK_TOP = "0x95b8b411653328db32f59b143c6d45f8501e2b35"
 ```
 Adjust `max_open_trades` (in `config.json`) and `LEV` (in `COPY_HL.py`) for the account to be copied.
 
-3. **Start Freqtrade**: open a terminal in the folder containing the file `docker-compose.yml` and run commands:
+4. **Start Freqtrade**: open a terminal in the folder containing the file `docker-compose.yml` and run commands:
 ```bash
 docker compose build
 docker compose up
