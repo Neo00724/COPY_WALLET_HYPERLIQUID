@@ -549,6 +549,7 @@ class COPY_HL(IStrategy):
 
     # Tunable parameters
     LEV = IntParameter(1, 6, default=6, space='buy', optimize=False)  # Leverage to use
+    copy_leverage = False  # Boolean to enable/disable copying leverage from tracked account
     change_threshold = 0.5 # in %
     adjustement_threshold = 10.0 # in %
     ADDRESS_TO_TRACK = ADDRESS_TO_TRACK_TOP
@@ -1087,8 +1088,28 @@ class COPY_HL(IStrategy):
     def leverage(self, pair: str, current_time: datetime, current_rate: float,
                  proposed_leverage: float, max_leverage: float, entry_tag: str | None, side: str,
                  **kwargs) -> float:
-        lev = min(self.LEV.value, max_leverage)
-        return lev
-
-
-
+        """
+        Dynamically copy the leverage from the tracked account or use fixed value based on copy_leverage parameter
+        """
+        coin_ticker = pair.replace("/USDC:USDC", "")
+        
+        # Check if leverage copying is enabled
+        if (self.copy_leverage and
+            self.current_positions_to_copy and
+            coin_ticker in self.current_positions_to_copy and
+            self._got_perp_data_account_state_successfully):
+            
+            copied_leverage = float(self.current_positions_to_copy[coin_ticker].leverage)
+            # Ensure we don't exceed the maximum allowed leverage
+            dynamic_lev = min(copied_leverage, max_leverage)
+            
+            logger.info(f"Using dynamic leverage for {pair}: {dynamic_lev}x (copied from account: {copied_leverage}x)")
+            return dynamic_lev
+        
+        # Use fixed leverage when copy_leverage is False or no position data is available
+        fallback_lev = min(self.LEV.value, max_leverage)
+        if not self.copy_leverage:
+            logger.info(f"Using fixed leverage for {pair}: {fallback_lev}x (leverage copying disabled)")
+        else:
+            logger.info(f"Using fallback leverage for {pair}: {fallback_lev}x (no position data available)")
+        return fallback_lev
