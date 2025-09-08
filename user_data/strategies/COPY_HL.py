@@ -16,7 +16,10 @@ from copy import deepcopy
 
 logger = logging.getLogger(__name__)
 
-ADDRESS_TO_TRACK_TOP = "0x95b8b411653328db32f59b143c6d45f8501e2b35"
+#ADDRESS_TO_TRACK_TOP = "0x4b66f4048a0a90fd5ff44abbe5d68332656b78b8"
+
+#Account with short
+ADDRESS_TO_TRACK_TOP = "0xe61c2251b2641989f49bb5b73b2a8d0dbc6e40d8"
 
 #####################################################################################################################################################################################################
 # Classes used to manage the copied wallet position tracking
@@ -549,7 +552,7 @@ class COPY_HL(IStrategy):
 
     # Tunable parameters
     LEV = IntParameter(1, 6, default=6, space='buy', optimize=False)  # Leverage to use
-    copy_leverage = False  # Boolean to enable/disable copying leverage from tracked account
+    copy_leverage = True  # Boolean to enable/disable copying leverage from tracked account
     change_threshold = 0.5 # in %
     adjustement_threshold = 10.0 # in %
     ADDRESS_TO_TRACK = ADDRESS_TO_TRACK_TOP
@@ -691,8 +694,9 @@ class COPY_HL(IStrategy):
                     position_value = trade.amount * rate
                     stake_amount = trade.stake_amount
                     ratio_pc = position_value / my_account_value * 100.0
+                    position_type = "SHORT" if trade.is_short else "LONG"
                     
-                    logger.info(f"  {coin:>8} | LONG  | Stake: ${stake_amount:>10.2f} | "
+                    logger.info(f"  {coin:>8} | {position_type:>5} | Stake: ${stake_amount:>10.2f} | "
                             f"Value: ${position_value:>10.2f} ({ratio_pc:>5.2f}%) | "
                             f"Leverage: {trade.leverage}x")
             else:
@@ -734,7 +738,7 @@ class COPY_HL(IStrategy):
                 # Positions I should have but don't
                 should_have = copied_coins - my_coins
                 if should_have:
-                    logger.info("  Missing positions (should open if in whitelist and not Short, and significant size):")
+                    logger.info("  Missing positions (should open if in whitelist and significant size):")
                     for coin in should_have:
                         pos = self.current_positions_to_copy[coin]
                         size = float(pos.size)
@@ -768,8 +772,9 @@ class COPY_HL(IStrategy):
                         my_trade = next(t for t in self.my_open_positions if t.pair.replace("/USDC:USDC", "") == coin)
                         ticker = self.dp.ticker(my_trade.pair)
                         rate = ticker['last']
-                        my_value = trade.amount * rate
-                        logger.info(f"    {coin:>8} | LONG  | ${my_value:>8.2f}")
+                        my_value = my_trade.amount * rate
+                        position_type = "SHORT" if my_trade.is_short else "LONG"
+                        logger.info(f"    {coin:>8} | {position_type:>5} | ${my_value:>8.2f}")
             
             logger.info("=" * 80)
             return matching_positions_output
@@ -851,17 +856,22 @@ class COPY_HL(IStrategy):
                     copied_account_value = float(perp_data['marginSummary']['accountValue'])
                     #logger.info(f"copied account value: {copied_account_value}")
                     position_value_in_copied_account = float(chg.new_position_value) # in USDC
-                    if float(chg.new_size)<0.0: # check if short, just in case
-                        logger.info(f"Ignoring entry on {coin_ticker} because it is a Short. This code is LONG ONLY.")
-                        return df
+                    # Support both long and short positions
+                    is_short = float(chg.new_size) < 0.0
                     ratio_pc = position_value_in_copied_account/copied_account_value*100.0
-                    # if it is a long open and if the size is significant
+                    # Handle both long and short position openings
                     if 'opened_long' == chg.change_type:
-                        if ratio_pc>self.change_threshold:
-                            df['signal'] = 1
+                        if ratio_pc > self.change_threshold:
+                            df['signal'] = 1  # Enter long
                             return df
                         else:
-                            logger.info(f"Not opening position on {coin_ticker} because position size in copied account is too small compared to the copied account equity ({ratio_pc:.2f} , less than 1%)")
+                            logger.info(f"Not opening LONG position on {coin_ticker} because position size in copied account is too small compared to the copied account equity ({ratio_pc:.2f}% < {self.change_threshold}%)")
+                    elif 'opened_short' == chg.change_type:
+                        if ratio_pc > self.change_threshold:
+                            df['signal'] = 3  # Enter short (using signal 3 for short entry)
+                            return df
+                        else:
+                            logger.info(f"Not opening SHORT position on {coin_ticker} because position size in copied account is too small compared to the copied account equity ({ratio_pc:.2f}% < {self.change_threshold}%)")
                     elif 'closed' in chg.change_type:
                         df['signal'] = 0
                         return df
@@ -882,10 +892,14 @@ class COPY_HL(IStrategy):
             # Check for missed entries
             if coin_ticker in self.current_positions_to_copy:
                 if coin_ticker not in my_current_opened_tickers:
-                    is_short = float(self.current_positions_to_copy[coin_ticker].size)<0.0
-                    if self._is_position_significant(coin_ticker) and not is_short:
-                        df['signal'] = 1
-                        logger.info(f"Missed entry detected for {coin_ticker}. Sending entry signal.")
+                    is_short = float(self.current_positions_to_copy[coin_ticker].size) < 0.0
+                    if self._is_position_significant(coin_ticker):
+                        if is_short:
+                            df['signal'] = 3  # Enter short
+                            logger.info(f"Missed SHORT entry detected for {coin_ticker}. Sending short entry signal.")
+                        else:
+                            df['signal'] = 1  # Enter long
+                            logger.info(f"Missed LONG entry detected for {coin_ticker}. Sending long entry signal.")
             
             # Check for missed exits
             #   not in current positions to copy, but somehow in my current position
@@ -924,20 +938,34 @@ class COPY_HL(IStrategy):
 
     def check_mistaken_short(self, df, coin_ticker):
         """
+        Check for position direction mismatches and correct them
         """
         if coin_ticker in self.current_positions_to_copy:
             my_trades = Trade.get_trades_proxy(is_open=True)
             my_current_opened_tickers = [tr.pair.replace("/USDC:USDC", "") for tr in my_trades]
             if coin_ticker in my_current_opened_tickers:
-                is_short = float(self.current_positions_to_copy[coin_ticker].size) < 0.0
-                if is_short:
-                    df['signal'] = 0
-                    logger.info(f"There was a short mistaken as a long on {coin_ticker}. This code is LONG ONLY. Exiting immediatly.")
-                    return df
+                copied_position_size = float(self.current_positions_to_copy[coin_ticker].size)
+                is_copied_short = copied_position_size < 0.0
+                
+                # Find my current trade for this coin
+                my_trade = next((tr for tr in my_trades if tr.pair.replace("/USDC:USDC", "") == coin_ticker), None)
+                if my_trade:
+                    # Check if direction mismatch
+                    if is_copied_short and not my_trade.is_short:
+                        # I have long but should have short - close long and signal short entry
+                        df['signal'] = 0  # Exit current long position
+                        logger.info(f"Direction mismatch on {coin_ticker}: I have LONG but copied account has SHORT. Closing long position.")
+                        return df
+                    elif not is_copied_short and my_trade.is_short:
+                        # I have short but should have long - close short and signal long entry
+                        df['signal'] = 0  # Exit current short position
+                        logger.info(f"Direction mismatch on {coin_ticker}: I have SHORT but copied account has LONG. Closing short position.")
+                        return df
         return df
 
     def populate_entry_trend(self, dataframe: pd.DataFrame, metadata: dict) -> pd.DataFrame:
         dataframe.loc[dataframe['signal'] == 1, 'enter_long'] = 1
+        dataframe.loc[dataframe['signal'] == 3, 'enter_short'] = 1
         return dataframe
 
     def populate_exit_trend(self, dataframe: pd.DataFrame, metadata: dict) -> pd.DataFrame:
@@ -955,9 +983,11 @@ class COPY_HL(IStrategy):
         # You do not have to ensure that min_stake <= returned_value <= max_stake. Trades will succeed as the returned value will be clamped to supported range and this action will be logged.
 
         coin_ticker = pair.replace("/USDC:USDC", "")
+        logger.info(f"custom_stake_amount called for {pair}, side={side}, coin_ticker={coin_ticker}")
         self.wallets.update()
 
         if not self._got_perp_data_account_state_successfully :
+            logger.info(f"Rejecting {pair} ({side}): perp data not available")
             return None
         
         try:
@@ -971,27 +1001,38 @@ class COPY_HL(IStrategy):
             scale_factor = my_account_value / copied_account_value
 
             # Look in both position changes and current positions
-
             position_value_in_copied_account = None
+            copied_position_size = None
             
             # First check position changes
             for chg in self.copied_account_position_changes:
                 if coin_ticker == chg.coin:
                     position_value_in_copied_account = float(chg.new_position_value)
+                    copied_position_size = float(chg.new_size)
                     break
             
             # If not found in changes, check current positions
             if position_value_in_copied_account is None:
                 if coin_ticker in self.current_positions_to_copy:
                     position_value_in_copied_account = self.current_positions_to_copy[coin_ticker].position_value
+                    copied_position_size = float(self.current_positions_to_copy[coin_ticker].size)
             
             if position_value_in_copied_account is None:
                 logger.warning(f"No position value found for {coin_ticker}")
                 return None
             
+            # Check if the position direction matches the intended side
+            is_copied_short = copied_position_size < 0.0
+            logger.info(f"Position direction check for {coin_ticker}: side={side}, copied_position_size={copied_position_size}, is_copied_short={is_copied_short}")
+            
+            if (side == "short" and not is_copied_short) or (side == "long" and is_copied_short):
+                logger.warning(f"Position direction mismatch for {coin_ticker}: side={side}, copied_position_size={copied_position_size}")
+                return None
+            
             ratio_pc = position_value_in_copied_account/copied_account_value * 100.0
-            if ratio_pc<self.change_threshold:
-                logger.info(f"Not opening position on {pair} because position size in copied account is too small compared to the copied account equity({ratio_pc:.1f}% < 1%)")
+            if ratio_pc < self.change_threshold:
+                position_type = "SHORT" if is_copied_short else "LONG"
+                logger.info(f"Not opening {position_type} position on {pair} because position size in copied account is too small compared to the copied account equity({ratio_pc:.1f}% < {self.change_threshold}%)")
                 return None
 
             dust_USDC = 0.51
@@ -1001,7 +1042,8 @@ class COPY_HL(IStrategy):
             if returned_val < min_stake:
                 returned_val = min_stake
 
-            logger.info(f"Calculated stake for {pair}: {returned_val}")
+            position_type = "SHORT" if is_copied_short else "LONG"
+            logger.info(f"Calculated stake for {pair} ({position_type}): {returned_val}")
             return returned_val
             
         except Exception as e:
@@ -1033,7 +1075,7 @@ class COPY_HL(IStrategy):
                 self._is_cooldown_after_position_change = False
 
         if self._is_cooldown_after_position_change:
-            logger.info(f"Not doing position size change because of the cooldown of {self._cooldown_seconds_after_position_change} seconds.") 
+            logger.info(f"Not doing position size change because of the cooldown of {self._cooldown_seconds_after_position_change} seconds.")
             return None
 
         try:
@@ -1053,13 +1095,20 @@ class COPY_HL(IStrategy):
                         # Check if change is significant (>0.5% of account), otherwise skip doing adjustment by returning None
                         change_ratio_pc = abs(float(chg.old_position_value) - float(chg.new_position_value)) / copied_account_value * 100.0
                         if change_ratio_pc < self.change_threshold:
-                            logger.info(f"Not increasing or decreasing position on {trade.pair} because position change in copied account is too small compared to the copied account equity({change_ratio_pc:.1f}% < 1%)")
+                            logger.info(f"Not increasing or decreasing position on {trade.pair} because position change in copied account is too small compared to the copied account equity({change_ratio_pc:.1f}% < {self.change_threshold}%)")
+                            return None
+
+                        # Check if the position direction matches
+                        copied_position_size = float(chg.new_size)
+                        is_copied_short = copied_position_size < 0.0
+                        if (trade.is_short and not is_copied_short) or (not trade.is_short and is_copied_short):
+                            logger.warning(f"Position direction mismatch for {coin_ticker}: my_trade.is_short={trade.is_short}, copied_is_short={is_copied_short}")
                             return None
 
                         delta_stake = abs(float(chg.old_position_value) - float(chg.new_position_value)) * scale_factor
 
                         self._time_of_change = datetime.now()
-                        self._is_cooldown_after_position_change = True 
+                        self._is_cooldown_after_position_change = True
                         
                         if 'increased' in chg.change_type:
                             return delta_stake / trade.leverage - dust_USDC

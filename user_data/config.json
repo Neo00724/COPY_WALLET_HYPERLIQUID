@@ -1,5 +1,5 @@
 {
-    "max_open_trades": 4,
+    "max_open_trades": 25,
     "stake_currency": "USDC",
     "stake_amount": 16,
     "_comment": "stake_amount is not used",

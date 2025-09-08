@@ -12,7 +12,7 @@ This strategy monitors a specified Hyperliquid wallet address and replicates its
 - **Real-time Position Tracking**: Monitors target Hyperliquid account for position changes
 - **Smart Position Scaling**: Automatically scales position sizes based on account value ratios
 - **Position Change Detection**: Detects opens, closes, increases, decreases, and modifications
-- **Long-Only Trading**: **Only copies long positions** (ignores shorts for simplicity, and in general it reduces the long-term risk-reward ratio)
+- **Full Position Support**: **Copies both long AND short positions** from the tracked account
 - **Comprehensive Logging**: Detailed position summaries and change tracking
 - **Data Persistence**: Saves position history and changes to CSV files
 - **Missed Trade Recovery**: Detects and corrects missed entries/exits, or incorect sizing
@@ -29,7 +29,7 @@ This strategy monitors a specified Hyperliquid wallet address and replicates its
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `max_open_trades` (in `config.json`)| 4 | Maximum number of positions at a given time. **Which value to use will depend on the account you copy**. |
+| `max_open_trades` (in `config.json`)| 25 | Maximum number of positions at a given time. **Which value to use will depend on the account you copy**. |
 | `LEV` (in `COPY_HL.py`) | 6 | Effective leverage to use. **Which value to use will depend on the account you copy**, and it can be tricky to evaluate (If the trader you're copying uses cross margin with leverage of 25, that doesn't mean you should enter 25 here. What really matters is the maximum position size they take relative to their total account value. For example, if you're following an account with 100k USDC in capital, and at some point you notice they hold positions totaling 300k USDC, that implies you'll need at least 3x leverage—ideally 4x to be safe. But keep in mind: if you set your leverage value too high, you risk being liquidated on a trade where the copied account would not be) |
 | `copy_leverage` (in `COPY_HL.py`) | True | Boolean to enable/disable copying leverage from the tracked account. When `True`, the bot will dynamically copy the exact leverage used by the tracked account for each position. When `False`, the bot will use the fixed leverage value defined by `LEV` parameter. This provides flexibility to either mirror the exact leverage strategy or use a conservative fixed leverage approach. |
 | `change_threshold` (in `COPY_HL.py`)| 0.5 | Minimum position size or position change threshold (% of account). Will ignore changes, or positions with sizes below this %. If the trader does a few small changes below 0.5%, the bot will still trigger a position size change (correction) when the relative "error"/difference between the expected and actual position gets above 10% |
@@ -61,21 +61,22 @@ You can also check the positions (verify if they are copied properly) of the wal
 - Only copies positions >0.5% of copied account value (absolute or changes)
 
 ### Trade Management
-- **Entry**: Opens positions when target account opens new longs
+- **Entry**: Opens positions when target account opens new longs or shorts
 - **Exit**: Closes positions when target account closes positions
 - **Adjustment**: Increases/decreases positions to match target ratios
-- **Safety**: Immediately exits any mistakenly opened Short or Long positions
+- **Safety**: Detects and corrects position direction mismatches
 
 ## Position Types Detected
 
 | Change Type | Description | Action |
 |-------------|-------------|---------|
 | `opened_long` | New long position opened | Enter long |
+| `opened_short` | New short position opened | Enter short |
 | `closed` | Position closed | Exit position |
 | `increased` | Position size increased | Add to position |
 | `decreased` | Position size decreased | Reduce position |
 | `modified` | Leverage/entry price changed | None |
-| `flipped` | Direction changed (long↔short) | None |
+| `flipped` | Direction changed (long↔short) | Exit and re-enter |
 
 ## File Structure
 
@@ -131,11 +132,12 @@ docker compose up
 
 ## Safety Features
 
-- **Long-Only**: Automatically ignores and closes any short positions
+- **Full Position Support**: Supports both long and short positions with direction validation
 - **Size Limits**: Respects Freqtrade's min/max stake amounts
 - **Error Handling**: Gracefully handles API failures and data issues
-- **Position Validation**: Continuously validates position alignment
+- **Position Validation**: Continuously validates position alignment and direction
 - **Threshold Protection**: Ignores insignificant positions or positions changes
+- **Direction Mismatch Detection**: Automatically detects and corrects wrong position directions
 
 ## Monitoring
 
@@ -161,10 +163,12 @@ POSITIONS TO COPY:
        LTC |  LONG | Size:   18345.1600 | Value: $2023287.70 (98.49%) | Scaled: $   1069.64
       HYPE |  LONG | Size:  133827.7300 | Value: $5933252.41 (288.83%) | Scaled: $   3136.70
       WLFI |  LONG | Size: 6484884.0000 | Value: $1440876.38 (70.14%) | Scaled: $    761.74
+       ADA | SHORT | Size: -119787.0000 | Value: $ 100982.84 (22.18%) | Scaled: $    222.79
 --------------------------------------------------
 MY OPEN POSITIONS:
-      HYPE | LONG  | Stake: $    496.94 | Value: $   2981.67 (274.56%) | Leverage: 6.0x
-       LTC | LONG  | Stake: $    174.56 | Value: $   1047.39 (96.45%) | Leverage: 6.0x
+      HYPE |  LONG | Stake: $    496.94 | Value: $   2981.67 (274.56%) | Leverage: 6.0x
+       LTC |  LONG | Stake: $    174.56 | Value: $   1047.39 (96.45%) | Leverage: 6.0x
+       ADA | SHORT | Stake: $     37.13 | Value: $    222.79 ( 20.52%) | Leverage: 6.0x
 --------------------------------------------------
 POSITION MATCHING ANALYSIS:
   Matching positions:
@@ -183,6 +187,8 @@ LTC → Difference: -2.08%   (my total value: 1047.4) ; ||>10% will trigger a si
 - Very fresh and experimental, use with Dry-run only (paper trading)
 - Monitor positions regularly (e.g. look in `https://apexliquid.bot/`)
 - The copied trader's strategy may not be suitable for your risk tolerance and leverage level
+- **Short positions carry additional risks**: Unlimited loss potential, margin calls, and forced liquidations
+- Ensure your exchange supports short selling and you understand the risks
 - Past performance doesn't guarantee future results
 
 ## License
