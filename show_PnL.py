@@ -7,6 +7,7 @@ Show performance for Freqtrade containers whose *container name* contains 'COPY'
 - Now with beautiful color formatting!
 """
 
+import os
 import re
 import subprocess
 from typing import Any, Dict, List, Optional
@@ -14,8 +15,23 @@ from typing import Any, Dict, List, Optional
 import requests
 from requests.auth import HTTPBasicAuth
 
-USERNAME = "ft"
-PASSWORD = "kamala"
+# Load .env file if it exists
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    # python-dotenv not installed, try to load .env manually
+    if os.path.exists('.env'):
+        with open('.env', 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    os.environ[key] = value
+
+# Load credentials from environment variables
+USERNAME = os.getenv("FREQTRADE__API_SERVER__USERNAME")
+PASSWORD = os.getenv("FREQTRADE__API_SERVER__PASSWORD")
 TIMEOUT = 3  # seconds
 
 PORT_RE = re.compile(r"(?:\d{1,3}(?:\.\d{1,3}){3}:)?(\d+)->8080/tcp")
