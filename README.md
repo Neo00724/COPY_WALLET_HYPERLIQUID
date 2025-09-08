@@ -7,7 +7,8 @@ More about Freqtrade: https://www.freqtrade.io/en/stable/
 
 This strategy monitors a specified Hyperliquid wallet address and replicates its perp trading positions in your Freqtrade bot with appropriate position sizing based on account value scaling, and an "effective" leverage asssumption.
 
-**EDIT:** added a Long+Short version `COPY_HL_LS`. You need to edit `docker-compose.yml` and replace `--strategy COPY_HL` by `--strategy COPY_HL_LS` to use it. Still experimental, use at your own risk. Dry-run (paper trading) highly recommended.
+**EDIT:** added a Long+Short version `COPY_HL_LS`. 
+You need to edit `docker-compose.yml` and replace `--strategy COPY_HL` by `--strategy COPY_HL_LS` to use it. Still experimental, use at your own risk. Dry-run (paper trading) highly recommended.
 
 ## Features
 
