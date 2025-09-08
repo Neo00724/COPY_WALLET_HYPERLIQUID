@@ -16,10 +16,7 @@ from copy import deepcopy
 
 logger = logging.getLogger(__name__)
 
-#ADDRESS_TO_TRACK_TOP = "0x4b66f4048a0a90fd5ff44abbe5d68332656b78b8"
-
-#Account with short
-ADDRESS_TO_TRACK_TOP = "0xe61c2251b2641989f49bb5b73b2a8d0dbc6e40d8"
+ADDRESS_TO_TRACK_TOP = "CHANGE_ME_TO_THE_ADDRESS_YOU_WANT_TO_TRACK"
 
 #####################################################################################################################################################################################################
 # Classes used to manage the copied wallet position tracking
