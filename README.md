@@ -7,12 +7,14 @@ More about Freqtrade: https://www.freqtrade.io/en/stable/
 
 This strategy monitors a specified Hyperliquid wallet address and replicates its perp trading positions in your Freqtrade bot with appropriate position sizing based on account value scaling, and an "effective" leverage asssumption.
 
+EDIT: added a Long+Short version `COPY_HL_LS`. You need to edit ``docker-compose-yml` and replace `COPY_HL` by `COPY_HL_LS` to use it. Still experimental, use at your own risk.
+
 ## Features
 
 - **Real-time Position Tracking**: Monitors target Hyperliquid account for position changes
 - **Smart Position Scaling**: Automatically scales position sizes based on account value ratios
 - **Position Change Detection**: Detects opens, closes, increases, decreases, and modifications
-- **Long-Only Trading**: **Only copies long positions** (ignores shorts for simplicity, and in general it reduces the long-term risk-reward ratio)
+- **Long-Only Trading**: **Only copies long positions** (ignores shorts for simplicity, and in general it reduces the long-term risk-reward ratio). NEW: added a Long+Short version
 - **Comprehensive Logging**: Detailed position summaries and change tracking
 - **Data Persistence**: Saves position history and changes to CSV files
 - **Missed Trade Recovery**: Detects and corrects missed entries/exits, or incorect sizing
