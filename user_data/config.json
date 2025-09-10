@@ -1,5 +1,5 @@
 {
-    "max_open_trades": 25,
+    "max_open_trades": 50,
     "stake_currency": "USDC",
     "stake_amount": 16,
     "_comment": "stake_amount is not used",
@@ -49,8 +49,10 @@
     "pairlists": [
         {
             "method": "RemotePairList",
-            "number_assets": 15,
-            "pairlist_url": "https://remotepairlist.com?q=1fa19388d69e4acb"
+            "number_assets": 50,
+            "pairlist_url": "http://dynamic-pairlist-service:5000/pairlist",
+            "refresh_period": 900,
+            "keep_pairlist_on_failure": true
         }
     ],
     "edge": {

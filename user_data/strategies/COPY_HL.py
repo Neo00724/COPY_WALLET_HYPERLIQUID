@@ -16,7 +16,8 @@ from copy import deepcopy
 
 logger = logging.getLogger(__name__)
 
-ADDRESS_TO_TRACK_TOP = "CHANGE_ME_TO_THE_ADDRESS_YOU_WANT_TO_TRACK"
+# Retrieve the address from environment variables
+ADDRESS_TO_TRACK_TOP = os.getenv("TRACKED_ADDRESS")
 
 #####################################################################################################################################################################################################
 # Classes used to manage the copied wallet position tracking
@@ -543,7 +544,7 @@ class COPY_HL(IStrategy):
     # The bot will iterate every process_throttle_secs since process_only_new_candles is set to false. Therefore the timeframe is basically irrelevant for this strategy.
     # In theory, you could even increase it to 15m, 1h, or more, and it should not affect the bot. I ended up setting it to 5m, just in case.
     startup_candle_count: int = 0
-    can_short: bool = False
+    can_short: bool = True
     process_only_new_candles: bool = False
     position_adjustment_enable = True
 

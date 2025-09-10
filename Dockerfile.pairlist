@@ -1,0 +1,44 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Installer les dépendances système
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Installer les dépendances Python directement
+RUN pip install --no-cache-dir \
+    flask==2.3.3 \
+    hyperliquid-python-sdk==0.18.0 \
+    schedule==1.2.0 \
+    requests==2.31.0 \
+    pandas==2.0.3
+
+# Copier le service
+COPY dynamic_pairlist_service.py .
+
+# Créer les répertoires nécessaires
+RUN mkdir -p user_data/strategies/position_data logs
+
+# Exposer le port
+EXPOSE 5000
+
+# Toutes les variables d'environnement sont fournies par docker-compose depuis .env
+# Aucune valeur par défaut dans le Dockerfile pour une configuration centralisée
+
+# Script d'entrée pour gérer les variables d'environnement
+COPY <<EOF /app/entrypoint.sh
+#!/bin/bash
+exec python dynamic_pairlist_service.py \
+    --address "\${TRACKED_ADDRESS}" \
+    --refresh-period "\${REFRESH_PERIOD}" \
+    --max-pairs "\${MAX_PAIRS}" \
+    --port 5000 \
+    --host 0.0.0.0
+EOF
+
+RUN chmod +x /app/entrypoint.sh
+
+# Commande de démarrage
+CMD ["/app/entrypoint.sh"]

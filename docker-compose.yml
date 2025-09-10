@@ -1,5 +1,33 @@
-version: '3'
 services:
+  # Service de paires dynamiques - démarre en premier
+  dynamic-pairlist:
+    build:
+      context: .
+      dockerfile: Dockerfile.pairlist
+    container_name: dynamic-pairlist-service
+    ports:
+      - "5001:5000"
+    env_file:
+      - path: .env
+    environment:
+      - TRACKED_ADDRESS=${TRACKED_ADDRESS:-CHANGE_ME_TO_THE_ADDRESS_YOU_WANT_TO_TRACK}
+      - REFRESH_PERIOD=${REFRESH_PERIOD:-900}
+      - MAX_PAIRS=${MAX_PAIRS:-50}
+      - MIN_PAIR_AGE_HOURS=${MIN_PAIR_AGE_HOURS:-1}
+    volumes:
+      - "./user_data/strategies/position_data:/app/user_data/strategies/position_data:ro"
+      - "./logs:/app/logs"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - freqtrade-network
+
+  # FreqTrade - démarre après le service de paires
   freqtrade:
     image: freqtradeorg/freqtrade:2025.7
     # image: freqtradeorg/freqtrade:develop
@@ -25,6 +53,12 @@ services:
         limits:
           cpus: '1.0'      # Limits CPU
           memory: '512M'    # Limit to 512MB of RAM
+    # Attendre que le service de paires soit prêt
+    depends_on:
+      dynamic-pairlist:
+        condition: service_healthy
+    networks:
+      - freqtrade-network
     # Default command used when running `docker compose up`
     command: >
       trade
@@ -32,4 +66,8 @@ services:
       --db-url sqlite:////freqtrade/user_data/tradesv3.sqlite
       --config /freqtrade/user_data/config.json -v
       --strategy COPY_HL
+
+networks:
+  freqtrade-network:
+    driver: bridge
 
