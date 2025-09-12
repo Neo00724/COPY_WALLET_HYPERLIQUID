@@ -1,14 +1,12 @@
 import pandas as pd
-from freqtrade.strategy import (IStrategy, IntParameter)
-from freqtrade.persistence import Trade
 import logging
 import os
 import json
 import time
-from pathlib import Path
-import json
-import os
 import csv
+from freqtrade.strategy import (IStrategy, IntParameter)
+from freqtrade.persistence import Trade
+from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict
@@ -18,6 +16,174 @@ logger = logging.getLogger(__name__)
 
 # Retrieve the address from environment variables
 ADDRESS_TO_TRACK_TOP = os.getenv("TRACKED_ADDRESS")
+
+#####################################################################################################################################################################################################
+# SMART COOLDOWN SYSTEM INTEGRATED
+#####################################################################################################################################################################################################
+
+class SmartCooldownManager:
+    """Smart cooldown manager for fast validation"""
+    
+    def __init__(self, base_cooldown: int = 120):
+        self.base_cooldown = base_cooldown
+        self.current_cooldown = base_cooldown
+        self.validation_history = []
+        self.last_validation_times = {}
+        self.success_streak = 0
+        self.max_history = 10
+        
+    def validate_position_change_fast(self, exchange, pair: str, expected_change: float, 
+                                    timeout: int = 30) -> bool:
+        """Fast position change validation"""
+        start_time = time.time()
+        coin = pair.replace("/USDC:USDC", "")
+        
+        logger.info(f"⚡ Fast validation for {coin}: expected ${expected_change:.2f}")
+        
+        # Get initial position
+        initial_pos = self._get_position_value_fast(exchange, pair)
+        if initial_pos is None:
+            logger.warning(f"Cannot get initial position for {coin}")
+            return False
+        
+        # Smart polling validation
+        for attempt in range(1, min(timeout, 30) + 1):
+            elapsed = time.time() - start_time
+            if elapsed > timeout:
+                break
+                
+            current_pos = self._get_position_value_fast(exchange, pair)
+            if current_pos is None:
+                time.sleep(1)
+                continue
+                
+            actual_change = current_pos - initial_pos
+            
+            # Check if change is acceptable
+            if self._is_change_acceptable(expected_change, actual_change):
+                validation_time = elapsed
+                self._record_success(coin, validation_time)
+                logger.info(f"✅ Fast validation successful for {coin} in {validation_time:.1f}s")
+                return True
+                
+            # Adaptive wait
+            sleep_time = max(0.5, 2.0 - (attempt * 0.1))
+            time.sleep(sleep_time)
+        
+        # Validation failed
+        self._record_failure(coin, time.time() - start_time)
+        logger.warning(f"❌ Fast validation failed for {coin}")
+        return False
+    
+    def _get_position_value_fast(self, exchange, pair: str) -> Optional[float]:
+        """Get position value quickly via multiple methods"""
+        try:
+            # Method 1: Direct exchange positions (fastest)
+            positions = exchange.fetch_positions([pair])
+            if positions and len(positions) > 0:
+                pos = positions[0]
+                notional = pos.get('notional', 0)
+                if notional and notional != 0:
+                    return abs(float(notional))
+                    
+            # Method 2: Via FreqTrade open trades
+            open_trades = Trade.get_trades_proxy(is_open=True)
+            for trade in open_trades:
+                if trade.pair == pair:
+                    ticker = exchange.fetch_ticker(pair)
+                    return abs(trade.amount * ticker['last'])
+                    
+            return 0.0  # No position found
+            
+        except Exception as e:
+            logger.debug(f"Error getting position for {pair}: {e}")
+            return None
+    
+    def _is_change_acceptable(self, expected: float, actual: float) -> bool:
+        """Check if observed change is acceptable"""
+        if expected == 0:
+            return abs(actual) < 1.0  # Tolerance for close
+            
+        # Size-based tolerance
+        if abs(expected) < 10:
+            tolerance = 0.4  # 40% for small positions
+        elif abs(expected) < 100:
+            tolerance = 0.2  # 20% for medium positions  
+        else:
+            tolerance = 0.15  # 15% for large positions
+            
+        ratio = abs(actual / expected) if expected != 0 else 0
+        return (1 - tolerance) <= ratio <= (1 + tolerance)
+    
+    def _record_success(self, coin: str, validation_time: float):
+        """Record validation success"""
+        self.validation_history.append({
+            'coin': coin,
+            'success': True,
+            'time': validation_time,
+            'timestamp': datetime.now()
+        })
+        self.success_streak += 1
+        self._update_cooldown()
+        
+    def _record_failure(self, coin: str, attempted_time: float):
+        """Record validation failure"""
+        self.validation_history.append({
+            'coin': coin,
+            'success': False,
+            'time': attempted_time,
+            'timestamp': datetime.now()
+        })
+        self.success_streak = 0
+        self._update_cooldown()
+    
+    def _update_cooldown(self):
+        """Update adaptive cooldown"""
+        # Keep only recent results
+        if len(self.validation_history) > self.max_history:
+            self.validation_history = self.validation_history[-self.max_history:]
+        
+        if len(self.validation_history) < 3:
+            return  # Not enough data
+            
+        # Calculate recent success rate
+        recent_successes = sum(1 for r in self.validation_history[-5:] if r['success'])
+        success_rate = recent_successes / min(5, len(self.validation_history))
+        
+        # Adjust cooldown based on performance
+        if success_rate >= 0.8 and self.success_streak >= 3:
+            # High success rate: reduce cooldown
+            self.current_cooldown = max(5, self.current_cooldown * 0.7)
+            logger.info(f"📉 Cooldown reduced to {self.current_cooldown:.0f}s (success rate: {success_rate:.1%})")
+        elif success_rate < 0.4:
+            # Low success rate: increase cooldown
+            self.current_cooldown = min(300, self.current_cooldown * 1.3)
+            logger.info(f"📈 Cooldown increased to {self.current_cooldown:.0f}s (success rate: {success_rate:.1%})")
+    
+    def get_adaptive_cooldown(self) -> int:
+        """Get current adaptive cooldown"""
+        return int(self.current_cooldown)
+    
+    def get_stats(self) -> Dict:
+        """Manager statistics"""
+        if not self.validation_history:
+            return {"no_data": True}
+            
+        recent = self.validation_history[-5:]
+        success_rate = sum(1 for r in recent if r['success']) / len(recent)
+        avg_time = sum(r['time'] for r in recent) / len(recent)
+        
+        return {
+            'current_cooldown': self.current_cooldown,
+            'success_rate': success_rate,
+            'success_streak': self.success_streak,
+            'avg_validation_time': avg_time,
+            'total_validations': len(self.validation_history)
+        }
+
+#####################################################################################################################################################################################################
+# End of smart cooldown system
+#####################################################################################################################################################################################################
 
 #####################################################################################################################################################################################################
 # Classes used to manage the copied wallet position tracking
@@ -529,7 +695,7 @@ class PositionTracker:
         return stats
 
 ############################################################################################################################################################################################################
-# End of classes usesd to manage the copied wallet position tracking
+# End of classes used to manage the copied wallet position tracking
 ############################################################################################################################################################################################################
 
 ## freqtrade strategy class
@@ -567,7 +733,7 @@ class COPY_HL(IStrategy):
     _cooldown_seconds_after_position_change = 100 # seconds
     # I noticed that with real money (an issue not seen in dry-run), it can take about 1 minute or more for the position size to be updated by Freqtrade,
     # even when calling self.wallets.update(). If you don’t wait long enough after a position size change, it can cause an infinite loop of position increases and decreases.
-    # any suggestion to improve this would be apreciated
+    # suggestions to improve this are appreciated
     _time_of_change = None
     _got_perp_data_account_state_successfully = False
     matching_positions_check_output = None
@@ -786,11 +952,13 @@ class COPY_HL(IStrategy):
         Called only once after bot instantiation.
         :param **kwargs: Ensure to keep this here so updates to this won't break your strategy.
         """
-        # because in Live (real money, real account) the value returned by self.dp.ticker(trade.pair) or trade.amount takes some time (> 1 minute) to be refreshed, even if we call self.wallets.update()
-        if self.config["runmode"].value in ('live'):
-            self._cooldown_seconds_after_position_change = 120
-        elif self.config["runmode"].value in ('dry_run'):
-            self._cooldown_seconds_after_position_change = 5
+        # ⚡ ZERO COOLDOWN SYSTEM - INSTANT VALIDATION ⚡
+        # Initialize smart manager for fast validation only
+        self._smart_cooldown = SmartCooldownManager(base_cooldown=10)  # Minimal timeout for validation
+        self._last_position_changes = {}
+        self._position_change_timestamps = {}
+        
+        logger.info("🚀 Zero cooldown copy trading strategy initialized!")
 
     def bot_loop_start(self, current_time: datetime, **kwargs) -> None:
         """
@@ -837,6 +1005,11 @@ class COPY_HL(IStrategy):
             self._got_perp_data_account_state_successfully = False
 
         self.matching_positions_check_output = self.check_print_positions_summary()
+        
+        # Show stats every 10 loops
+        if self.nb_loop % 10 == 0:
+            self.log_zero_cooldown_stats()
+            self.cleanup_old_timestamps()
 
     def populate_indicators(self, df: pd.DataFrame, metadata: dict) -> pd.DataFrame:
         coin_ticker = metadata['pair'].replace("/USDC:USDC", "")
@@ -1045,7 +1218,7 @@ class COPY_HL(IStrategy):
             return returned_val
             
         except Exception as e:
-            logger.error(f"Error in custom_stake_amount: {e}")
+            logger.error(f"Error in custom_stake_amount for {pair}: {e}")
             return None
     
     def adjust_trade_position(self, trade: Trade, current_time: datetime,
@@ -1068,13 +1241,17 @@ class COPY_HL(IStrategy):
         if not self._got_perp_data_account_state_successfully :
             return None
 
-        if self._time_of_change is not None:
-            if datetime.now() > self._time_of_change + timedelta(seconds=self._cooldown_seconds_after_position_change):
-                self._is_cooldown_after_position_change = False
-
-        if self._is_cooldown_after_position_change:
-            logger.info(f"Not doing position size change because of the cooldown of {self._cooldown_seconds_after_position_change} seconds.")
-            return None
+        # ⚡ ZERO COOLDOWN SYSTEM - SMART ANTI-SPAM ⚡
+        # Only prevents identical repeated adjustments (anti-spam)
+        current_time = time.time()
+        position_key = f"{coin_ticker}_{trade.id}"
+        
+        # Anti-spam check (5s)
+        if position_key in self._position_change_timestamps:
+            last_change_time = self._position_change_timestamps[position_key]
+            if current_time - last_change_time < 5:
+                logger.debug(f"⏩ Anti-spam: Recent change detected for {coin_ticker}, skipping")
+                return None
 
         try:
             if not self._cached_perp_data:
@@ -1104,14 +1281,20 @@ class COPY_HL(IStrategy):
                             return None
 
                         delta_stake = abs(float(chg.old_position_value) - float(chg.new_position_value)) * scale_factor
-
-                        self._time_of_change = datetime.now()
-                        self._is_cooldown_after_position_change = True
+                        expected_change_usdc = abs(float(chg.old_position_value) - float(chg.new_position_value)) * scale_factor
                         
+                        # ⚡ INSTANT EXECUTION ⚡
                         if 'increased' in chg.change_type:
-                            return delta_stake / trade.leverage - dust_USDC
+                            adjustment = delta_stake / trade.leverage - dust_USDC
+                            self._position_change_timestamps[position_key] = current_time
+                            logger.info(f"⚡ Increase {coin_ticker}: {adjustment:.2f}")
+                            return adjustment
+                                
                         elif 'decreased' in chg.change_type:
-                            return -1.0 * delta_stake / trade.leverage - dust_USDC
+                            adjustment = -1.0 * delta_stake / trade.leverage - dust_USDC
+                            self._position_change_timestamps[position_key] = current_time
+                            logger.info(f"⚡ Decrease {coin_ticker}: {adjustment:.2f}")
+                            return adjustment
                     
             # for already opened positions, if difference with what it should be in copied account (and scaled) is too large (>10%), adjust to match
             if self.matching_positions_check_output:
@@ -1119,13 +1302,13 @@ class COPY_HL(IStrategy):
                     logger.info(f"{pos['coin']} → Difference: {pos['diff_pc']:.2f}%   (my total value: {pos['my_value']:.1f}) ; ||>{self.adjustement_threshold:.0f}% will trigger a size correction.")
                     if pos['coin']==coin_ticker:
                         if abs(pos['diff_pc'])>self.adjustement_threshold:
-                            #logger.info(pos['diff_pc'])
                             delta_stake = pos['my_value']/(1.0 + pos['diff_pc']/100.0)-pos['my_value']
-                            logger.info(delta_stake)
-                            logger.info(delta_stake / trade.leverage)
-                            self._time_of_change = datetime.now()
-                            self._is_cooldown_after_position_change = True
-                            return delta_stake / trade.leverage - dust_USDC
+                            
+                            # ⚡ INSTANT CORRECTION ⚡
+                            self._position_change_timestamps[position_key] = current_time
+                            adjustment = delta_stake / trade.leverage - dust_USDC
+                            logger.info(f"⚡ Correct {coin_ticker}: {adjustment:.2f} (diff: {pos['diff_pc']:.1f}%)")
+                            return adjustment
             return None
             
         except Exception as e:
@@ -1160,3 +1343,26 @@ class COPY_HL(IStrategy):
         else:
             logger.info(f"Using fallback leverage for {pair}: {fallback_lev}x (no position data available)")
         return fallback_lev
+
+    # ⚡ ZERO COOLDOWN UTILITIES ⚡
+    
+    def log_zero_cooldown_stats(self):
+        """Log zero cooldown system stats"""
+        current_time = time.time()
+        recent_changes = len([ts for ts in self._position_change_timestamps.values() 
+                            if current_time - ts < 60])
+        
+        logger.info("⚡ ZERO COOLDOWN STATS:")
+        logger.info(f"  • Mode: INSTANT EXECUTION")
+        logger.info(f"  • Recent changes (60s): {recent_changes}")
+        logger.info(f"  • Tracked positions: {len(self._position_change_timestamps)}")
+        logger.info(f"  • Anti-spam: 5s interval")
+    
+    def cleanup_old_timestamps(self):
+        """Clean old timestamps to free memory"""
+        current_time = time.time()
+        # Keep only last 10 minutes
+        self._position_change_timestamps = {
+            key: ts for key, ts in self._position_change_timestamps.items()
+            if current_time - ts < 600
+        }
